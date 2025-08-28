@@ -182,4 +182,102 @@ router.get('/stats', (req, res) => {
     });
 });
 
+// Obtener videos ocultos (inactivos)
+router.get('/hidden', (req, res) => {
+    const sql = `SELECT * FROM allowed_videos WHERE is_active = 0 ORDER BY created_at DESC`;
+    
+    db.all(sql, [], (err, videos) => {
+        if (err) {
+            console.error('Error obteniendo videos ocultos:', err);
+            return res.status(500).json({
+                success: false,
+                error: 'Error al obtener videos ocultos'
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: videos
+        });
+    });
+});
+
+// Obtener videos eliminados (soft delete)
+router.get('/deleted', (req, res) => {
+    const sql = `SELECT * FROM allowed_videos WHERE is_active = 0 ORDER BY created_at DESC`;
+    
+    db.all(sql, [], (err, videos) => {
+        if (err) {
+            console.error('Error obteniendo videos eliminados:', err);
+            return res.status(500).json({
+                success: false,
+                error: 'Error al obtener videos eliminados'
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: videos
+        });
+    });
+});
+
+// Restaurar un video eliminado
+router.patch('/:videoId/restore', (req, res) => {
+    const { videoId } = req.params;
+    
+    const sql = `UPDATE allowed_videos SET is_active = 1 WHERE video_id = ?`;
+    
+    db.run(sql, [videoId], function(err) {
+        if (err) {
+            console.error('Error restaurando video:', err);
+            return res.status(500).json({
+                success: false,
+                error: 'Error al restaurar video'
+            });
+        }
+        
+        if (this.changes > 0) {
+            res.json({
+                success: true,
+                message: 'Video restaurado exitosamente'
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Video no encontrado'
+            });
+        }
+    });
+});
+
+// Eliminar permanentemente un video
+router.delete('/:videoId/permanent', (req, res) => {
+    const { videoId } = req.params;
+    
+    const sql = `DELETE FROM allowed_videos WHERE video_id = ?`;
+    
+    db.run(sql, [videoId], function(err) {
+        if (err) {
+            console.error('Error eliminando permanentemente video:', err);
+            return res.status(500).json({
+                success: false,
+                error: 'Error al eliminar permanentemente video'
+            });
+        }
+        
+        if (this.changes > 0) {
+            res.json({
+                success: true,
+                message: 'Video eliminado permanentemente'
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Video no encontrado'
+            });
+        }
+    });
+});
+
 module.exports = router;
