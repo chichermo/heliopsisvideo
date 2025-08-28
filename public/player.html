@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reproductor de Video - Acceso Controlado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        .video-player {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .video-player video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .controls-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-container:hover .controls-overlay {
+            opacity: 1;
+        }
+
+        .video-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-container:hover .video-info {
+            opacity: 1;
+        }
+
+        .video-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .video-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            border: 4px solid #333;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.7;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #dc3545;
+        }
+
+        .error-message {
+            font-size: 1rem;
+            opacity: 0.8;
+            max-width: 500px;
+            line-height: 1.5;
+        }
+
+        .retry-button {
+            margin-top: 20px;
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .retry-button:hover {
+            background: #5a6fd8;
+        }
+
+        .access-denied {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .access-denied h1 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        .access-denied p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .access-denied .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .fullscreen-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-container:hover .fullscreen-button {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .video-info {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                padding: 10px;
+            }
+            
+            .controls-overlay {
+                padding: 15px;
+            }
+            
+            .fullscreen-button {
+                top: 10px;
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container" id="videoContainer">
+        <!-- Pantalla de carga -->
+        <div class="loading-screen" id="loadingScreen">
+            <div class="spinner"></div>
+            <h2>Verificando acceso...</h2>
+            <p>Espera mientras verificamos tu permiso para ver este video</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- Pantalla de error -->
+        <div class="error-screen" id="errorScreen" style="display: none;">
+            <div class="error-icon">⚠️</div>
+            <div class="error-title" id="errorTitle">Error de Acceso</div>
+            <div class="error-message" id="errorMessage">No se pudo verificar tu acceso al video</div>
+            <button class="retry-button" onclick="retryAccess()">🔄 Reintentar</button>
+        </div>
+
+        <!-- Reproductor de video -->
+        <div class="video-player" id="videoPlayer" style="display: none;">
+            <video id="videoElement" controls autoplay>
+                Tu navegador no soporta la reproducción de video.
+            </video>
+        </div>
+
+        <!-- Información del video -->
+        <div class="video-info" id="videoInfo">
+            <div class="video-title" id="videoTitle">Cargando video...</div>
+            <div class="video-meta" id="videoMeta">
+                <span>Verificando acceso...</span>
+            </div>
+        </div>
+
+        <!-- Controles adicionales -->
+        <div class="controls-overlay" id="controlsOverlay">
+            <!-- Los controles nativos del video se muestran aquí -->
+        </div>
+
+        <!-- Botón de pantalla completa -->
+        <button class="fullscreen-button" onclick="toggleFullscreen()" title="Pantalla completa">
+            ⛶
+        </button>
+    </div>
+
+    <script>
+        // Obtener token de la URL
+        const token = window.location.pathname.split('/').pop();
+        let videoInfo = null;
+        let retryCount = 0;
+        const maxRetries = 3;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!token) {
+                showError('Token no válido', 'La URL no contiene un token de acceso válido');
+                return;
+            }
+
+            // Simular progreso de carga
+            simulateLoadingProgress();
+            
+            // Verificar acceso
+            checkAccess();
+        });
+
+        // Simular progreso de carga
+        function simulateLoadingProgress() {
+            let progress = 0;
+            const progressBar = document.getElementById('progressFill');
+            
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                }
+                progressBar.style.width = progress + '%';
+            }, 200);
+        }
+
+        // Verificar acceso al video
+        async function checkAccess() {
+            try {
+                const response = await fetch(`/api/video/check/${token}`);
+                const result = await response.json();
+
+                if (result.success && result.data.valid) {
+                    videoInfo = result.data;
+                    loadVideo();
+                } else {
+                    showError('Acceso Denegado', result.data?.message || 'No tienes permiso para ver este video');
+                }
+            } catch (error) {
+                console.error('Error verificando acceso:', error);
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    setTimeout(checkAccess, 2000);
+                } else {
+                    showError('Error de Conexión', 'No se pudo verificar tu acceso. Verifica tu conexión a internet.');
+                }
+            }
+        }
+
+        // Cargar video
+        async function loadVideo() {
+            try {
+                // Ocultar pantalla de carga
+                document.getElementById('loadingScreen').style.display = 'none';
+                
+                // Mostrar reproductor
+                document.getElementById('videoPlayer').style.display = 'block';
+                
+                // Configurar video
+                const video = document.getElementById('videoElement');
+                const videoUrl = `/api/video/stream/${token}`;
+                
+                video.src = videoUrl;
+                video.load();
+
+                // Actualizar información del video
+                updateVideoInfo();
+
+                // Eventos del video
+                video.addEventListener('loadedmetadata', function() {
+                    console.log('Video cargado correctamente');
+                });
+
+                video.addEventListener('error', function(e) {
+                    console.error('Error en el video:', e);
+                    showError('Error de Reproducción', 'No se pudo cargar el video. Intenta recargar la página.');
+                });
+
+                video.addEventListener('ended', function() {
+                    console.log('Video terminado');
+                });
+
+            } catch (error) {
+                console.error('Error cargando video:', error);
+                showError('Error de Carga', 'No se pudo cargar el video desde OneDrive');
+            }
+        }
+
+        // Actualizar información del video
+        function updateVideoInfo() {
+            if (!videoInfo) return;
+
+            const title = document.getElementById('videoTitle');
+            const meta = document.getElementById('videoMeta');
+
+            title.textContent = 'Video Privado';
+            
+            meta.innerHTML = `
+                <span>Expira: ${new Date(videoInfo.expiresAt).toLocaleString()}</span>
+                <span>Vistas: ${videoInfo.currentViews}/${videoInfo.maxViews}</span>
+                ${videoInfo.notes ? `<span>Notas: ${videoInfo.notes}</span>` : ''}
+            `;
+        }
+
+        // Mostrar error
+        function showError(title, message) {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('errorScreen').style.display = 'flex';
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        // Reintentar acceso
+        function retryAccess() {
+            retryCount = 0;
+            document.getElementById('errorScreen').style.display = 'none';
+            document.getElementById('loadingScreen').style.display = 'flex';
+            document.getElementById('progressFill').style.width = '0%';
+            
+            simulateLoadingProgress();
+            checkAccess();
+        }
+
+        // Pantalla completa
+        function toggleFullscreen() {
+            const container = document.getElementById('videoContainer');
+            
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => {
+                    console.error('Error al entrar en pantalla completa:', err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Atajos de teclado
+        document.addEventListener('keydown', function(e) {
+            const video = document.getElementById('videoElement');
+            
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    if (video.paused) {
+                        video.play();
+                    } else {
+                        video.pause();
+                    }
+                    break;
+                case 'f':
+                case 'F':
+                    e.preventDefault();
+                    toggleFullscreen();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    video.volume = Math.min(1, video.volume + 0.1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    video.volume = Math.max(0, video.volume - 0.1);
+                    break;
+            }
+        });
+
+        // Detectar cambios de orientación en móviles
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                const video = document.getElementById('videoElement');
+                if (video) {
+                    video.style.width = '100%';
+                    video.style.height = '100%';
+                }
+            }, 100);
+        });
+
+        // Prevenir descarga del video
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // Prevenir arrastrar el video
+        document.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+        });
+
+        // Log de acceso exitoso
+        function logSuccessfulAccess() {
+            // Esta función se puede usar para analytics
+            console.log('Acceso exitoso al video con token:', token);
+        }
+
+        // Limpiar al salir
+        window.addEventListener('beforeunload', function() {
+            // Limpiar recursos si es necesario
+        });
+    </script>
+</body>
+</html>
