@@ -44,7 +44,15 @@ app.use(express.static('public'));
 
 // Inicializar base de datos
 require('./database/init');
-require('./database/migrate').migrateDatabase();
+
+// Ejecutar migración - usar migración forzada en producción
+if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+    console.log('🚀 Entorno de producción detectado - Ejecutando migración forzada...');
+    require('./database/force-migrate');
+} else {
+    console.log('🔄 Entorno de desarrollo - Ejecutando migración estándar...');
+    require('./database/migrate').migrateDatabase();
+}
 
 // Rutas de la API
 app.use('/api/googledrive', googledriveRoutes);
