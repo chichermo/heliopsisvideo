@@ -5,10 +5,10 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
-const { googledriveRoutes } = require('./routes/googledrive');
-const { accessRoutes } = require('./routes/access');
-const { videoRoutes } = require('./routes/video');
-const { videoManagementRoutes } = require('./routes/videos');
+const googledriveRoutes = require('./routes/googledrive');
+const accessRoutes = require('./routes/access');
+const videoRoutes = require('./routes/video');
+const videoManagementRoutes = require('./routes/videos');
 const tokenRoutes = require('./routes/tokens');
 
 const app = express();

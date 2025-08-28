@@ -211,6 +211,4 @@ router.get('/status', (req, res) => {
     });
 });
 
-module.exports = { 
-    googledriveRoutes: router
-};
+module.exports = router;
