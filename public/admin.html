@@ -1283,12 +1283,12 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        google_drive_id: googleDriveId,
-                        name: name,
-                        size: size,
-                        mime_type: mimeType,
-                        created_time: createdTime,
-                        notes: 'Agregado automáticamente'
+                        video_id: googleDriveId,
+                        title: name,
+                        description: `Video de Google Drive: ${name}`,
+                        file_size: size,
+                        duration: 0,
+                        notes: 'Agregado automáticamente desde Google Drive'
                     })
                 });
 
