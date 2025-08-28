@@ -1,22 +1,30 @@
 const express = require('express');
-const { getAccessToken, updateTokenUsage } = require('../database/database');
+const { db } = require('../database/init');
 const { getGoogleDriveVideoStream } = require('./googledrive');
 
 const router = express.Router();
 
 // Middleware para verificar acceso al video
-const verifyVideoAccess = async (req, res, next) => {
-    try {
-        const { token } = req.params;
-        
-        if (!token) {
-            return res.status(400).json({
-                error: 'Token de acceso requerido'
+const verifyVideoAccess = (req, res, next) => {
+    const { token } = req.params;
+    
+    if (!token) {
+        return res.status(400).json({
+            error: 'Token de acceso requerido'
+        });
+    }
+
+    // Obtener información del token
+    const sql = `SELECT * FROM access_tokens WHERE token = ? AND is_active = 1`;
+    
+    db.get(sql, [token], (err, accessToken) => {
+        if (err) {
+            console.error('Error verificando token:', err);
+            return res.status(500).json({
+                error: 'Error interno del servidor',
+                message: 'No se pudo verificar el acceso'
             });
         }
-
-        // Obtener información del token
-        const accessToken = await getAccessToken(token);
         
         if (!accessToken) {
             return res.status(403).json({
@@ -25,62 +33,46 @@ const verifyVideoAccess = async (req, res, next) => {
             });
         }
 
-        // Verificar si ya se usó el token (si maxViews = 1)
-        if (accessToken.maxViews === 1 && accessToken.used) {
-            return res.status(403).json({
-                error: 'Acceso denegado',
-                message: 'Este link ya fue utilizado'
-            });
-        }
-
         // Verificar si se excedió el número máximo de vistas
-        if (accessToken.currentViews >= accessToken.maxViews) {
+        if (accessToken.current_views >= accessToken.max_views) {
             return res.status(403).json({
                 error: 'Acceso denegado',
                 message: 'Se ha excedido el número máximo de vistas permitidas'
             });
         }
 
+        // Verificar si el token ha expirado
+        if (accessToken.expires_at && new Date(accessToken.expires_at) < new Date()) {
+            return res.status(403).json({
+                error: 'Acceso denegado',
+                message: 'El token ha expirado'
+            });
+        }
+
         // Adjuntar información del token a la request
         req.accessToken = accessToken;
         next();
-
-    } catch (error) {
-        console.error('Error al verificar acceso:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'No se pudo verificar el acceso'
-        });
-    }
+    });
 };
 
 // Obtener información del video (metadata)
-router.get('/info/:token', verifyVideoAccess, async (req, res) => {
-    try {
-        const { accessToken } = req;
-        
-        res.json({
-            success: true,
-            data: {
-                videoId: accessToken.video_id,
-                expiresAt: new Date(accessToken.expires_at * 1000).toISOString(),
-                maxViews: accessToken.maxViews,
-                currentViews: accessToken.currentViews,
-                notes: accessToken.notes,
-                email: accessToken.email
-            }
-        });
-
-    } catch (error) {
-        console.error('Error al obtener información del video:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'No se pudo obtener la información del video'
-        });
-    }
+router.get('/info/:token', verifyVideoAccess, (req, res) => {
+    const { accessToken } = req;
+    
+    res.json({
+        success: true,
+        data: {
+            videoId: accessToken.video_id,
+            expiresAt: accessToken.expires_at,
+            maxViews: accessToken.max_views,
+            currentViews: accessToken.current_views,
+            notes: accessToken.notes,
+            email: accessToken.email
+        }
+    });
 });
 
-// Stream del video desde OneDrive
+// Stream del video desde Google Drive
 router.get('/stream/:token', verifyVideoAccess, async (req, res) => {
     try {
         const { accessToken } = req;
@@ -91,7 +83,12 @@ router.get('/stream/:token', verifyVideoAccess, async (req, res) => {
         const userAgent = req.headers['user-agent'];
 
         // Registrar el acceso al video
-        await updateTokenUsage(token, ipAddress, userAgent);
+        const updateSql = `UPDATE access_tokens SET current_views = current_views + 1 WHERE token = ?`;
+        db.run(updateSql, [token], (err) => {
+            if (err) {
+                console.error('Error actualizando uso del token:', err);
+            }
+        });
 
         // Obtener stream del video desde Google Drive
         const videoStream = await getGoogleDriveVideoStream(accessToken.video_id);
@@ -99,7 +96,7 @@ router.get('/stream/:token', verifyVideoAccess, async (req, res) => {
         if (!videoStream) {
             return res.status(404).json({
                 error: 'Video no encontrado',
-                message: 'El video no está disponible en OneDrive'
+                message: 'El video no está disponible en Google Drive'
             });
         }
 
@@ -145,37 +142,20 @@ router.get('/stream/:token', verifyVideoAccess, async (req, res) => {
     }
 });
 
-// Thumbnail del video (si está disponible)
-router.get('/thumbnail/:token', verifyVideoAccess, async (req, res) => {
-    try {
-        const { accessToken } = req;
-        
-        // Por ahora, devolver un thumbnail por defecto
-        // En el futuro, se puede implementar generación de thumbnails desde OneDrive
-        res.json({
-            success: true,
-            message: 'Thumbnail no implementado aún',
-            data: {
-                videoId: accessToken.video_id,
-                thumbnailUrl: null
-            }
-        });
-
-    } catch (error) {
-        console.error('Error al obtener thumbnail:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'No se pudo obtener el thumbnail'
-        });
-    }
-});
-
 // Verificar estado del token sin consumir acceso
-router.get('/check/:token', async (req, res) => {
-    try {
-        const { token } = req.params;
-        
-        const accessToken = await getAccessToken(token);
+router.get('/check/:token', (req, res) => {
+    const { token } = req.params;
+    
+    const sql = `SELECT * FROM access_tokens WHERE token = ? AND is_active = 1`;
+    
+    db.get(sql, [token], (err, accessToken) => {
+        if (err) {
+            console.error('Error verificando token:', err);
+            return res.status(500).json({
+                error: 'Error interno del servidor',
+                message: 'No se pudo verificar el token'
+            });
+        }
         
         if (!accessToken) {
             return res.status(404).json({
@@ -185,28 +165,20 @@ router.get('/check/:token', async (req, res) => {
         }
 
         // Verificar si se puede usar
-        const canUse = accessToken.currentViews < accessToken.maxViews && 
-                      accessToken.expires_at > Math.floor(Date.now() / 1000);
+        const canUse = accessToken.current_views < accessToken.max_views && 
+                      (!accessToken.expires_at || new Date(accessToken.expires_at) > new Date());
 
         res.json({
             success: true,
             data: {
                 valid: canUse,
-                expiresAt: new Date(accessToken.expires_at * 1000).toISOString(),
-                maxViews: accessToken.maxViews,
-                currentViews: accessToken.currentViews,
-                used: accessToken.used,
+                expiresAt: accessToken.expires_at,
+                maxViews: accessToken.max_views,
+                currentViews: accessToken.current_views,
                 notes: accessToken.notes
             }
         });
-
-    } catch (error) {
-        console.error('Error al verificar token:', error);
-        res.status(500).json({
-            error: 'Error interno del servidor',
-            message: 'No se pudo verificar el token'
-        });
-    }
+    });
 });
 
-module.exports = { videoRoutes: router };
+module.exports = router;
