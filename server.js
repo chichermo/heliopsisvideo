@@ -44,6 +44,7 @@ app.use(express.static('public'));
 
 // Inicializar base de datos
 require('./database/init');
+require('./database/migrate').migrateDatabase();
 
 // Rutas de la API
 app.use('/api/googledrive', googledriveRoutes);

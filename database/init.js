@@ -59,6 +59,7 @@ function initDatabase() {
         description TEXT,
         file_size INTEGER,
         duration INTEGER,
+        notes TEXT,
         is_active BOOLEAN DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
