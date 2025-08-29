@@ -1228,17 +1228,17 @@
             container.innerHTML = videos.map(video => `
                 <div class="token-item">
                     <div class="token-header">
-                        <strong>${video.name}</strong>
+                        <strong>${video.title || 'Sin título'}</strong>
                         <div>
-                            <button onclick="editVideoNotes('${video.google_drive_id}', '${video.name}', '${video.notes || ''}')" class="btn btn-info" style="padding: 5px 10px; font-size: 0.8rem;">📝 Editar</button>
-                            <button onclick="toggleVideoStatus('${video.google_drive_id}', false)" class="btn btn-warning" style="padding: 5px 10px; font-size: 0.8rem;">❌ Ocultar</button>
-                            <button onclick="removeVideo('${video.google_drive_id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️ Eliminar</button>
+                            <button onclick="editVideoNotes('${video.video_id}', '${video.title || ''}', '${video.notes || ''}')" class="btn btn-info" style="padding: 5px 10px; font-size: 0.8rem;">📝 Editar</button>
+                            <button onclick="toggleVideoStatus('${video.video_id}', false)" class="btn btn-warning" style="padding: 5px 10px; font-size: 0.8rem;">❌ Ocultar</button>
+                            <button onclick="removeVideo('${video.video_id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️ Eliminar</button>
                         </div>
                     </div>
                     <div class="token-meta">
-                        <div><strong>ID:</strong> ${video.google_drive_id}</div>
-                        <div><strong>Tamaño:</strong> ${formatFileSize(video.size)}</div>
-                        <div><strong>Agregado:</strong> ${new Date(video.added_at * 1000).toLocaleString()}</div>
+                        <div><strong>ID:</strong> ${video.video_id || 'Sin ID'}</div>
+                        <div><strong>Tamaño:</strong> ${formatFileSize(video.file_size || 0)}</div>
+                        <div><strong>Agregado:</strong> ${video.created_at ? new Date(video.created_at).toLocaleString() : 'Fecha no disponible'}</div>
                         <div><strong>Notas:</strong> ${video.notes || 'Sin notas'}</div>
                     </div>
                 </div>
@@ -1258,16 +1258,16 @@
             container.innerHTML = videos.map(video => `
                 <div class="token-item" style="border-left-color: #ffc107; opacity: 0.8;">
                     <div class="token-header">
-                        <strong>${video.name} <span style="color: #ffc107;">(OCULTO)</span></strong>
+                        <strong>${video.title || 'Sin título'} <span style="color: #ffc107;">(OCULTO)</span></strong>
                         <div>
-                            <button onclick="toggleVideoStatus('${video.google_drive_id}', true)" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;">✅ Reactivar</button>
-                            <button onclick="removeVideo('${video.google_drive_id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️ Eliminar</button>
+                            <button onclick="toggleVideoStatus('${video.video_id}', true)" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;">✅ Reactivar</button>
+                            <button onclick="removeVideo('${video.video_id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️ Eliminar</button>
                         </div>
                     </div>
                     <div class="token-meta">
-                        <div><strong>ID:</strong> ${video.google_drive_id}</div>
-                        <div><strong>Tamaño:</strong> ${formatFileSize(video.size)}</div>
-                        <div><strong>Ocultado:</strong> ${new Date(video.added_at * 1000).toLocaleString()}</div>
+                        <div><strong>ID:</strong> ${video.video_id || 'Sin ID'}</div>
+                        <div><strong>Tamaño:</strong> ${formatFileSize(video.file_size || 0)}</div>
+                        <div><strong>Ocultado:</strong> ${video.created_at ? new Date(video.created_at).toLocaleString() : 'Fecha no disponible'}</div>
                         <div><strong>Notas:</strong> ${video.notes || 'Sin notas'}</div>
                     </div>
                 </div>
@@ -1486,16 +1486,16 @@
                     const videosHtml = videos.map(video => `
                         <div class="token-item" style="border-left-color: #dc3545; opacity: 0.7;">
                             <div class="token-header">
-                                <strong>${video.name} <span style="color: #dc3545;">(ELIMINADO)</span></strong>
+                                <strong>${video.title || 'Sin título'} <span style="color: #dc3545;">(ELIMINADO)</span></strong>
                                 <div>
-                                    <button onclick="restoreVideo('${video.google_drive_id}')" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;">🔄 Restaurar</button>
-                                    <button onclick="permanentlyDeleteVideo('${video.google_drive_id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️ Eliminar Permanentemente</button>
+                                    <button onclick="restoreVideo('${video.video_id}')" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;">🔄 Restaurar</button>
+                                    <button onclick="permanentlyDeleteVideo('${video.video_id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️ Eliminar Permanentemente</button>
                                 </div>
                             </div>
                             <div class="token-meta">
-                                <div><strong>ID:</strong> ${video.google_drive_id}</div>
-                                <div><strong>Tamaño:</strong> ${formatFileSize(video.size)}</div>
-                                <div><strong>Eliminado:</strong> ${new Date(video.deleted_at * 1000).toLocaleString()}</div>
+                                <div><strong>ID:</strong> ${video.video_id || 'Sin ID'}</div>
+                                <div><strong>Tamaño:</strong> ${formatFileSize(video.file_size || 0)}</div>
+                                <div><strong>Eliminado:</strong> ${video.created_at ? new Date(video.created_at).toLocaleString() : 'Fecha no disponible'}</div>
                                 <div><strong>Notas:</strong> ${video.notes || 'Sin notas'}</div>
                             </div>
                         </div>
