@@ -205,7 +205,7 @@
             
             <div class="form-group">
                 <label for="email">📧 Email del Usuario:</label>
-                <input type="email" id="email" placeholder="usuario@ejemplo.com" required>
+                <input type="email" id="emailInput" placeholder="usuario@ejemplo.com" required>
             </div>
             
             <div class="form-group">
@@ -215,14 +215,12 @@
                 </select>
             </div>
             
-            <button onclick="generateToken()">🔑 Generar Token</button>
+            <button id="generateButton" onclick="generateToken()">🔑 Generar Token</button>
             
             <div class="status" id="status"></div>
             
-            <div class="token-result" id="tokenResult">
-                <h3>✅ Token Generado Exitosamente</h3>
-                <div class="token-link" id="tokenLink"></div>
-                <button class="copy-btn" onclick="copyLink()">📋 Copiar Link</button>
+            <div class="token-result" id="result">
+                <!-- El contenido se cargará aquí -->
             </div>
         </div>
         
@@ -300,18 +298,25 @@
             document.getElementById('videoSelect').value = videoId;
         }
         
-        // Generar token
+        // Función para generar token
         async function generateToken() {
-            const email = document.getElementById('email').value;
-            const videoId = document.getElementById('videoSelect').value;
+            const email = document.getElementById('emailInput').value.trim();
+            const videoSelect = document.getElementById('videoSelect');
+            const selectedVideo = videoSelect.value;
             
-            if (!email || !videoId) {
-                showStatus('Por favor completa todos los campos', 'error');
+            if (!email || !selectedVideo) {
+                alert('Por favor, completa todos los campos');
+                return;
+            }
+            
+            if (!email.includes('@')) {
+                alert('Por favor, ingresa un email válido');
                 return;
             }
             
             try {
-                showStatus('Generando token...', 'success');
+                document.getElementById('generateButton').disabled = true;
+                document.getElementById('generateButton').textContent = '🔄 Generando...';
                 
                 const response = await fetch('/api/video-simple/create-simple', {
                     method: 'POST',
@@ -320,46 +325,65 @@
                     },
                     body: JSON.stringify({
                         email: email,
-                        video_id: videoId
+                        video_id: selectedVideo
                     })
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    showTokenResult(result.link, email);
-                    showStatus('Token generado exitosamente', 'success');
+                    // Mostrar resultado con contraseña
+                    const resultDiv = document.getElementById('result');
+                    resultDiv.innerHTML = `
+                        <div class="success-message">
+                            <h3>✅ Token Generado Exitosamente</h3>
+                            <div class="token-info">
+                                <p><strong>Email:</strong> ${email}</p>
+                                <p><strong>Contraseña:</strong> <span class="password">${result.password}</span></p>
+                                <p><strong>Link:</strong> <a href="${result.link}" target="_blank">${result.link}</a></p>
+                            </div>
+                            <div class="copy-section">
+                                <button onclick="copyToClipboard('${result.link}')" class="copy-button">
+                                    📋 Copiar Link
+                                </button>
+                                <button onclick="copyToClipboard('${result.password}')" class="copy-button">
+                                    🔐 Copiar Contraseña
+                                </button>
+                            </div>
+                            <div class="instructions">
+                                <h4>📋 Instrucciones para el usuario:</h4>
+                                <p>1. Comparte el link con el usuario</p>
+                                <p>2. Comparte la contraseña por un canal seguro (WhatsApp, SMS, etc.)</p>
+                                <p>3. El usuario necesitará ambos para acceder al video</p>
+                            </div>
+                        </div>
+                    `;
+                    resultDiv.style.display = 'block';
+                    
+                    // Limpiar formulario
+                    document.getElementById('emailInput').value = '';
+                    document.getElementById('videoSelect').value = '';
+                    
                 } else {
-                    showStatus('Error generando token: ' + result.error, 'error');
+                    alert('Error generando token: ' + result.error);
                 }
                 
             } catch (error) {
-                showStatus('Error de conexión', 'error');
+                console.error('Error:', error);
+                alert('Error generando token');
+            } finally {
+                document.getElementById('generateButton').disabled = false;
+                document.getElementById('generateButton').textContent = '🔑 Generar Token';
             }
         }
         
-        // Mostrar resultado del token
-        function showTokenResult(link, email) {
-            const resultDiv = document.getElementById('tokenResult');
-            const linkDiv = document.getElementById('tokenLink');
-            
-            linkDiv.textContent = link;
-            resultDiv.style.display = 'block';
-            
-            // Limpiar formulario
-            document.getElementById('email').value = '';
-            document.getElementById('videoSelect').value = '';
-        }
-        
         // Copiar link al portapapeles
-        async function copyLink() {
-            const link = document.getElementById('tokenLink').textContent;
-            
+        async function copyToClipboard(text) {
             try {
-                await navigator.clipboard.writeText(link);
-                showStatus('Link copiado al portapapeles', 'success');
+                await navigator.clipboard.writeText(text);
+                alert('Texto copiado al portapapeles');
             } catch (error) {
-                showStatus('Error copiando link', 'error');
+                alert('Error copiando texto: ' + error);
             }
         }
         

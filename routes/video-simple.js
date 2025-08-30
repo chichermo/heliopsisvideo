@@ -1,6 +1,7 @@
 const express = require('express');
 const { db } = require('../database/init');
 const { getGoogleDriveVideoStream } = require('./googledrive');
+const crypto = require('crypto');
 
 const router = express.Router();
 
@@ -12,6 +13,11 @@ function getBaseUrl(req) {
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
     const host = req.headers['x-forwarded-host'] || req.headers.host;
     return `${protocol}://${host}`;
+}
+
+// Función para generar contraseña aleatoria
+function generatePassword() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
 // Crear token simple
@@ -28,17 +34,21 @@ router.post('/create-simple', (req, res) => {
     const token = Math.random().toString(36).substring(2, 15) + 
                   Math.random().toString(36).substring(2, 15);
     
+    // Generar contraseña aleatoria
+    const password = generatePassword();
+    
     // Guardar en memoria (simple y rápido) - SIN EXPIRACIÓN
     activeTokens.set(token, {
         email,
         video_id,
+        password, // Contraseña asociada al email
         created: new Date(),
         views: 0,
         maxViews: 1000, // Muchas más vistas para evitar problemas
         // NO HAY EXPIRACIÓN - LOS TOKENS NO EXPIRAN
     });
     
-    console.log(`✅ Token simple creado: ${token} para ${email}`);
+    console.log(`✅ Token simple creado: ${token} para ${email} con contraseña: ${password}`);
     
     // Usar URL dinámica para producción
     const baseUrl = getBaseUrl(req);
@@ -47,7 +57,9 @@ router.post('/create-simple', (req, res) => {
     res.json({
         success: true,
         token,
-        link: link
+        password, // Devolver la contraseña al administrador
+        link: link,
+        message: `Token creado con contraseña: ${password}`
     });
 });
 
@@ -76,10 +88,10 @@ router.get('/check-simple/:token', (req, res) => {
     });
 });
 
-// Verificar token simple CON VALIDACIÓN DE EMAIL
+// Verificar token simple CON VALIDACIÓN DE EMAIL Y CONTRASEÑA
 router.post('/check-simple/:token', (req, res) => {
     const { token } = req.params;
-    const { email } = req.body;
+    const { email, password } = req.body;
     
     const tokenData = activeTokens.get(token);
     
@@ -93,7 +105,17 @@ router.post('/check-simple/:token', (req, res) => {
     if (email && email !== tokenData.email) {
         return res.status(403).json({
             error: 'Email no autorizado para este token',
-            authorizedEmail: tokenData.email
+            emailValidated: false,
+            passwordValidated: false
+        });
+    }
+    
+    // Validar contraseña si se proporciona
+    if (password && password !== tokenData.password) {
+        return res.status(403).json({
+            error: 'Contraseña incorrecta',
+            emailValidated: email === tokenData.email,
+            passwordValidated: false
         });
     }
     
@@ -106,7 +128,9 @@ router.post('/check-simple/:token', (req, res) => {
         email: tokenData.email,
         views: tokenData.views,
         maxViews: tokenData.maxViews,
-        emailValidated: email === tokenData.email
+        emailValidated: email === tokenData.email,
+        passwordValidated: password === tokenData.password,
+        accessValidated: email === tokenData.email && password === tokenData.password
     });
 });
 
@@ -192,10 +216,14 @@ router.post('/migrate-token', (req, res) => {
         const newToken = Math.random().toString(36).substring(2, 15) + 
                         Math.random().toString(36).substring(2, 15);
         
+        // Generar contraseña aleatoria
+        const password = generatePassword();
+        
         // Guardar en memoria
         activeTokens.set(newToken, {
             email: tokenData.email,
             video_id: tokenData.video_id,
+            password: password, // Contraseña asociada al email
             created: new Date(),
             views: 0,
             maxViews: 1000, // Sin expiración
@@ -209,8 +237,9 @@ router.post('/migrate-token', (req, res) => {
             success: true,
             oldToken,
             newToken,
+            password, // Devolver la contraseña
             link: link,
-            message: 'Token migrado exitosamente al sistema simple'
+            message: `Token migrado exitosamente al sistema simple con contraseña: ${password}`
         });
     });
 });

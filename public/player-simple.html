@@ -158,10 +158,11 @@
         </div>
         
         <div class="email-form" id="emailForm">
-            <h3>📧 Verificación de Email</h3>
-            <p>Por favor, ingresa tu email para verificar el acceso:</p>
+            <h3>🔐 Verificación de Acceso</h3>
+            <p>Por favor, ingresa tu email y contraseña para verificar el acceso:</p>
             <input type="email" class="email-input" id="emailInput" placeholder="tu@email.com" required>
-            <button class="validate-button" onclick="validateEmail()">✅ Verificar Email</button>
+            <input type="password" class="email-input" id="passwordInput" placeholder="Contraseña" required>
+            <button class="validate-button" onclick="validateAccess()">✅ Verificar Acceso</button>
         </div>
         
         <div class="email-info" id="emailInfo">
@@ -224,25 +225,28 @@
         
         // Función para mostrar formulario de email
         function showEmailForm(authorizedEmail) {
-            updateStatus('📧 Verificación de email requerida', 'loading');
+            updateStatus('🔐 Verificación de acceso requerida', 'loading');
             
             const emailForm = document.getElementById('emailForm');
             const emailInput = document.getElementById('emailInput');
+            const passwordInput = document.getElementById('passwordInput');
             
             // Mostrar formulario
             emailForm.style.display = 'block';
             
-            // Agregar placeholder con el email autorizado
-            emailInput.placeholder = `Email autorizado: ${authorizedEmail}`;
+            // NO mostrar el email autorizado - mantener placeholder genérico
+            emailInput.placeholder = 'tu@email.com';
             
-            // Enfocar el input
+            // Enfocar el input de email
             emailInput.focus();
         }
         
         // Función para validar email
-        async function validateEmail() {
+        async function validateAccess() {
             const emailInput = document.getElementById('emailInput');
+            const passwordInput = document.getElementById('passwordInput');
             const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
             
             if (!email) {
                 alert('Por favor, ingresa tu email');
@@ -253,22 +257,27 @@
                 alert('Por favor, ingresa un email válido');
                 return;
             }
+
+            if (!password) {
+                alert('Por favor, ingresa tu contraseña');
+                return;
+            }
             
             try {
-                updateStatus('🔐 Validando email...', 'loading');
+                updateStatus('🔐 Validando acceso...', 'loading');
                 
                 const response = await fetch(`/api/video-simple/check-simple/${token}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ email: email })
+                    body: JSON.stringify({ email: email, password: password })
                 });
                 
                 const result = await response.json();
                 
-                if (result.success && result.emailValidated) {
-                    updateStatus('✅ Email validado correctamente', 'success');
+                if (result.success && result.accessValidated) {
+                    updateStatus('✅ Acceso validado correctamente', 'success');
                     showEmailInfo(email);
                     
                     // Ocultar formulario
@@ -280,18 +289,20 @@
                     }, 1000);
                     
                 } else {
-                    updateStatus('❌ Email no autorizado para este token', 'error');
+                    updateStatus('❌ Acceso denegado: Email o contraseña incorrectos', 'error');
                     emailInput.style.border = '2px solid #ff4444';
+                    passwordInput.style.border = '2px solid #ff4444';
                     
                     // Limpiar borde después de 3 segundos
                     setTimeout(() => {
                         emailInput.style.border = 'none';
+                        passwordInput.style.border = 'none';
                     }, 3000);
                 }
                 
             } catch (error) {
-                console.error('Error validando email:', error);
-                updateStatus('❌ Error validando email', 'error');
+                console.error('Error validando acceso:', error);
+                updateStatus('❌ Error validando acceso', 'error');
             }
         }
         
@@ -340,7 +351,13 @@
         // Permitir validar con Enter
         document.getElementById('emailInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                validateEmail();
+                validateAccess();
+            }
+        });
+
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                validateAccess();
             }
         });
         
