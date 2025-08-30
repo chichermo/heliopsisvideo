@@ -1,3 +1,7 @@
+
+
+
+
 # 🎬 Heliopsis Video - Control de Acceso a Videos
 
 Sistema profesional de control de acceso a videos con Google Drive, diseñado para eventos de pago y distribución controlada de contenido multimedia.
@@ -109,15 +113,72 @@ VIDEO_FILE_ID=id_del_video_en_google_drive
 
 ## 📱 Despliegue
 
-### Plataformas Recomendadas
-- **Render**: Fácil y gratuito para empezar
+### 🚀 Despliegue en Render (Recomendado)
+
+#### Configuración de Render
+
+1. **Crear cuenta en Render:**
+   - Ve a [render.com](https://render.com)
+   - Crea una cuenta gratuita
+
+2. **Crear nuevo Web Service:**
+   - Click en "New +" → "Web Service"
+   - Conecta tu repositorio de GitHub
+   - Selecciona el repositorio `heliopsisvideo`
+
+3. **Configurar el servicio:**
+   - **Name:** `heliopsis-video`
+   - **Environment:** `Node`
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+   - **Plan:** `Free`
+
+4. **Variables de entorno:**
+   - Ve a "Environment" → "Environment Variables"
+   - Agrega las siguientes variables:
+
+```env
+# Google Drive API
+GOOGLE_CLIENT_ID=tu_client_id_de_google_cloud
+GOOGLE_CLIENT_SECRET=tu_client_secret_de_google_cloud
+GOOGLE_REDIRECT_URI=https://tu-app.onrender.com/api/googledrive/callback
+GOOGLE_REFRESH_TOKEN=tu_refresh_token_de_google
+
+# Servidor
+PORT=10000
+JWT_SECRET=tu_jwt_secret_super_seguro_y_largo
+
+# Entorno
+NODE_ENV=production
+RENDER=true
+```
+
+5. **Desplegar:**
+   - Click en "Create Web Service"
+   - Espera a que se complete el despliegue
+   - Tu app estará disponible en: `https://tu-app.onrender.com`
+
+#### URLs de Producción
+
+Una vez desplegado, tendrás acceso a:
+
+- **Panel de Administración:** `https://tu-app.onrender.com/admin-simple`
+- **Reproductor de Video:** `https://tu-app.onrender.com/watch-simple/[TOKEN]`
+- **API:** `https://tu-app.onrender.com/api/`
+
+#### Características del Despliegue
+
+✅ **URLs Dinámicas**: Los links se generan automáticamente para producción  
+✅ **HTTPS Automático**: Seguridad SSL incluida  
+✅ **Escalabilidad**: Se adapta automáticamente al tráfico  
+✅ **Monitoreo**: Logs y métricas incluidas  
+✅ **Backup Automático**: Datos protegidos  
+
+### 🔧 Otras Plataformas
+
 - **Railway**: Excelente para proyectos Node.js
 - **Heroku**: Profesional y escalable
-
-### Variables de Producción
-- Cambiar `PORT` según la plataforma
-- Configurar `GOOGLE_REDIRECT_URI` para producción
-- Usar `JWT_SECRET` fuerte y único
+- **Vercel**: Optimizado para frontend
 
 ## 🤝 Contribución
 

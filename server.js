@@ -8,6 +8,7 @@ require('dotenv').config();
 const { router: googledriveRoutes } = require('./routes/googledrive');
 const accessRoutes = require('./routes/access');
 const videoRoutes = require('./routes/video');
+const videoSimpleRoutes = require('./routes/video-simple');
 const videoManagementRoutes = require('./routes/videos');
 const tokenRoutes = require('./routes/tokens');
 
@@ -58,6 +59,7 @@ if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
 app.use('/api/googledrive', googledriveRoutes);
 app.use('/api/access', accessRoutes);
 app.use('/api/video', videoRoutes);
+app.use('/api/video-simple', videoSimpleRoutes);
 app.use('/api/videos', videoManagementRoutes);
 app.use('/api/tokens', tokenRoutes);
 
@@ -66,9 +68,17 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+app.get('/admin-simple', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-simple.html'));
+});
+
 // Ruta para ver videos con token
 app.get('/watch/:token', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'player.html'));
+});
+
+app.get('/watch-simple/:token', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'player-simple.html'));
 });
 
 // Ruta de inicio

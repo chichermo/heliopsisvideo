@@ -545,8 +545,8 @@
                     console.log('🎬 Llamando a loadVideo()...');
                     loadVideo();
                 } else {
-                    console.log('❌ Acceso denegado:', result.data?.message);
-                    showError('Acceso Denegado', result.data?.message || 'No tienes permiso para ver este video');
+                    console.log('❌ Acceso denegado:', result.data?.valid === false ? 'Token inválido o límite excedido' : 'Error desconocido');
+                    showError('Acceso Denegado', result.data?.valid === false ? 'No tienes permiso para ver este video o se ha excedido el límite de vistas' : 'Error al verificar acceso');
                 }
             } catch (error) {
                 console.error('❌ Error verificando acceso:', error);

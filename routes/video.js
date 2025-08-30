@@ -70,7 +70,7 @@ const verifyVideoAccess = (req, res, next) => {
     }
 
     // Obtener información del token
-    const sql = `SELECT * FROM access_tokens WHERE token = ? AND is_active = 1`;
+    const sql = `SELECT * FROM access_tokens WHERE token = ?`;
     
     console.log(`🔍 Buscando token en BD: ${token}`);
     
@@ -98,14 +98,6 @@ const verifyVideoAccess = (req, res, next) => {
         // Verificar si se excedió el número máximo de vistas
         if (accessToken.current_views >= accessToken.max_views) {
             console.log('❌ Límite de vistas excedido');
-            // Marcar el token como inactivo si se excedió el límite
-            const deactivateSql = `UPDATE access_tokens SET is_active = 0 WHERE token = ?`;
-            db.run(deactivateSql, [token], (err) => {
-                if (err) {
-                    console.error('Error desactivando token:', err);
-                }
-            });
-            
             return res.status(403).json({
                 error: 'Acceso denegado',
                 message: 'Se ha excedido el número máximo de vistas permitidas'
@@ -160,14 +152,6 @@ router.get('/stream/:token', rateLimitMiddleware, verifyVideoAccess, async (req,
         const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
         const userAgent = req.headers['user-agent'];
 
-        // Registrar el acceso al video
-        const updateSql = `UPDATE access_tokens SET current_views = current_views + 1 WHERE token = ?`;
-        db.run(updateSql, [token], (err) => {
-            if (err) {
-                console.error('Error actualizando uso del token:', err);
-            }
-        });
-
         // Obtener stream del video desde Google Drive
         const videoStream = await getGoogleDriveVideoStream(accessToken.video_id);
         
@@ -175,6 +159,16 @@ router.get('/stream/:token', rateLimitMiddleware, verifyVideoAccess, async (req,
             return res.status(404).json({
                 error: 'Video no encontrado',
                 message: 'El video no está disponible en Google Drive'
+            });
+        }
+
+        // Registrar el acceso al video SOLO en la primera solicitud (sin Range header)
+        if (!req.headers.range) {
+            const updateSql = `UPDATE access_tokens SET current_views = current_views + 1 WHERE token = ?`;
+            db.run(updateSql, [token], (err) => {
+                if (err) {
+                    console.error('Error actualizando uso del token:', err);
+                }
             });
         }
 
@@ -232,7 +226,7 @@ router.get('/check/:token', rateLimitMiddleware, (req, res) => {
     
     console.log(`🔍 Verificando token: ${token}`);
     
-    const sql = `SELECT * FROM access_tokens WHERE token = ? AND is_active = 1`;
+    const sql = `SELECT * FROM access_tokens WHERE token = ?`;
     
     db.get(sql, [token], (err, accessToken) => {
         if (err) {
@@ -255,8 +249,7 @@ router.get('/check/:token', rateLimitMiddleware, (req, res) => {
 
         // Verificar si se puede usar
         const canUse = accessToken.current_views < accessToken.max_views && 
-                      (!accessToken.expires_at || new Date(accessToken.expires_at) > new Date()) &&
-                      accessToken.is_active === 1;
+                      (!accessToken.expires_at || new Date(accessToken.expires_at) > new Date());
 
         console.log(`📊 Token válido: ${canUse}`);
 
