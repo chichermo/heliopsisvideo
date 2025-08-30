@@ -51,7 +51,7 @@ router.post('/create-simple', (req, res) => {
     });
 });
 
-// Verificar token simple
+// Verificar token simple (GET - sin validación de email)
 router.get('/check-simple/:token', (req, res) => {
     const { token } = req.params;
     
@@ -73,6 +73,40 @@ router.get('/check-simple/:token', (req, res) => {
         views: tokenData.views,
         maxViews: tokenData.maxViews,
         // NO INCLUIR EXPIRACIÓN
+    });
+});
+
+// Verificar token simple CON VALIDACIÓN DE EMAIL
+router.post('/check-simple/:token', (req, res) => {
+    const { token } = req.params;
+    const { email } = req.body;
+    
+    const tokenData = activeTokens.get(token);
+    
+    if (!tokenData) {
+        return res.status(404).json({
+            error: 'Token no encontrado'
+        });
+    }
+    
+    // Validar email si se proporciona
+    if (email && email !== tokenData.email) {
+        return res.status(403).json({
+            error: 'Email no autorizado para este token',
+            authorizedEmail: tokenData.email
+        });
+    }
+    
+    // Verificar solo límite de vistas, NO expiración
+    const isValid = tokenData.views < tokenData.maxViews;
+    
+    res.json({
+        success: true,
+        valid: isValid,
+        email: tokenData.email,
+        views: tokenData.views,
+        maxViews: tokenData.maxViews,
+        emailValidated: email === tokenData.email
     });
 });
 

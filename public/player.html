@@ -248,16 +248,15 @@
                     }, 1000);
                     
                 } else {
-                    // Si el token no es válido, mostrar opción de migración
-                    updateStatus('⚠️ Token del sistema anterior detectado', 'error');
-                    document.getElementById('migrationNotice').style.display = 'block';
+                    // Si el token no es válido, migrar automáticamente al sistema simple
+                    updateStatus('🔄 Migrando al sistema simple...', 'loading');
+                    await migrateToSimple();
                 }
                 
             } catch (error) {
                 console.error('Error verificando acceso:', error);
-                updateStatus('❌ Error verificando acceso', 'error');
-                // Mostrar opción de migración en caso de error
-                document.getElementById('migrationNotice').style.display = 'block';
+                updateStatus('🔄 Migrando al sistema simple...', 'loading');
+                await migrateToSimple();
             }
         }
         
