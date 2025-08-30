@@ -3,936 +3,303 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reproductor de Video - Acceso Controlado</title>
+    <title>🎬 Heliopsis Video - Reproductor</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #000;
-            color: white;
-            overflow: hidden;
-        }
-
-        .video-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #000;
+            color: white;
         }
-
-        .video-player {
-            width: 100%;
-            height: 100%;
-            max-width: 100%;
-            max-height: 100%;
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
-
-        .video-player video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+        
+        .logo {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
-
-        .controls-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.8));
-            padding: 20px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .video-container:hover .controls-overlay {
-            opacity: 1;
-        }
-
-        .video-info {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
+        
+        .status {
+            font-size: 1.2em;
+            margin: 20px 0;
             padding: 15px;
             border-radius: 10px;
-            backdrop-filter: blur(10px);
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
         }
-
-        .video-container:hover .video-info {
-            opacity: 1;
-        }
-
-        .video-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .video-meta {
-            display: flex;
-            gap: 20px;
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-
-        .loading-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .spinner {
-            border: 4px solid #333;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .error-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            z-index: 1000;
-        }
-
-        .error-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.7;
-        }
-
-        .error-title {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            color: #dc3545;
-        }
-
-        .error-message {
-            font-size: 1rem;
-            opacity: 0.8;
-            max-width: 500px;
-            line-height: 1.5;
-        }
-
-        /* Estilos para mensaje de rate limiting */
-        .rate-limit-message {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .rate-limit-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            animation: pulse 2s infinite;
-        }
-
-        .rate-limit-title {
-            font-size: 1.3rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #ffc107;
-        }
-
-        .rate-limit-subtitle {
-            font-size: 1rem;
-            opacity: 0.8;
-            margin-bottom: 20px;
-        }
-
-        .rate-limit-progress {
-            width: 200px;
-            height: 4px;
-            background: #333;
-            border-radius: 2px;
-            margin: 0 auto;
-            overflow: hidden;
-        }
-
-        .rate-limit-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            border-radius: 2px;
-            animation: progressBar linear forwards;
-        }
-
-        @keyframes progressBar {
-            from { width: 0%; }
-            to { width: 100%; }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Estilos para mensaje de rate limiting */
-        .rate-limit-message {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .rate-limit-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            animation: pulse 2s infinite;
-        }
-
-        .rate-limit-title {
-            font-size: 1.3rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #ffc107;
-        }
-
-        .rate-limit-subtitle {
-            font-size: 1rem;
-            opacity: 0.8;
-            margin-bottom: 20px;
-        }
-
-        .rate-limit-progress {
-            width: 200px;
-            height: 4px;
-            background: #333;
-            border-radius: 2px;
-            margin: 0 auto;
-            overflow: hidden;
-        }
-
-        .rate-limit-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            border-radius: 2px;
-            animation: progressBar linear forwards;
-        }
-
-        @keyframes progressBar {
-            from { width: 0%; }
-            to { width: 100%; }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .retry-button {
-            margin-top: 20px;
-            padding: 12px 25px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        .retry-button:hover {
-            background: #5a6fd8;
-        }
-
-        .access-denied {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            padding: 30px;
+        
+        .video-container {
+            margin: 30px 0;
             border-radius: 15px;
-            text-align: center;
-            max-width: 500px;
-        }
-
-        .access-denied h1 {
-            font-size: 2rem;
-            margin-bottom: 15px;
-        }
-
-        .access-denied p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin-bottom: 20px;
-        }
-
-        .access-denied .icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: #333;
-            border-radius: 2px;
             overflow: hidden;
-            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
-
-        .progress-fill {
+        
+        video {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid #ff4444;
+            color: #ffcccc;
+        }
+        
+        .success {
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #44ff44;
+            color: #ccffcc;
+        }
+        
+        .loading {
+            background: rgba(255, 255, 0, 0.2);
+            border: 2px solid #ffff44;
+            color: #ffffcc;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
             height: 100%;
-            background: #667eea;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
             width: 0%;
             transition: width 0.3s ease;
         }
-
-        .fullscreen-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+        
+        .migration-notice {
+            background: rgba(255, 165, 0, 0.2);
+            border: 2px solid #ffa500;
+            color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
         }
         
-        .retry-video-button {
-            position: absolute;
-            top: 20px;
-            right: 80px;
-            background: rgba(255, 193, 7, 0.8);
-            color: #000;
+        .migrate-button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
             border: none;
-            padding: 10px;
-            border-radius: 5px;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
             cursor: pointer;
-            font-size: 1.2rem;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            margin: 10px;
+            transition: transform 0.2s;
         }
-
-        .video-container:hover .fullscreen-button,
-        .video-container:hover .retry-video-button {
-            opacity: 1;
-        }
-
-        @media (max-width: 768px) {
-            .video-info {
-                top: 10px;
-                left: 10px;
-                right: 10px;
-                padding: 10px;
-            }
-            
-            .controls-overlay {
-                padding: 15px;
-            }
-            
-            .fullscreen-button {
-                top: 10px;
-                right: 10px;
-            }
+        
+        .migrate-button:hover {
+            transform: scale(1.05);
         }
     </style>
 </head>
 <body>
-    <div class="video-container" id="videoContainer">
-        <!-- Pantalla de carga -->
-        <div class="loading-screen" id="loadingScreen">
-            <div class="spinner"></div>
-            <h2>Verificando acceso...</h2>
-            <p id="progressText">Espera mientras verificamos tu permiso para ver este video</p>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
+    <div class="container">
+        <div class="logo">🎬 Heliopsis Video</div>
+        
+        <div class="status loading" id="status">
+            🔄 Verificando acceso...
         </div>
-
-        <!-- Pantalla de error -->
-        <div class="error-screen" id="errorScreen" style="display: none;">
-            <div class="error-icon">⚠️</div>
-            <div class="error-title" id="errorTitle">Error de Acceso</div>
-            <div class="error-message" id="errorMessage">No se pudo verificar tu acceso al video</div>
-            <button class="retry-button" onclick="retryAccess()">🔄 Reintentar</button>
+        
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
         </div>
-
-        <!-- Reproductor de video -->
-        <div class="video-player" id="videoPlayer" style="display: none;">
-            <video id="videoElement" controls autoplay>
-                Tu navegador no soporta la reproducción de video.
+        
+        <div class="migration-notice" id="migrationNotice" style="display: none;">
+            <h3>🔄 Sistema Actualizado</h3>
+            <p>Detectamos que estás usando el sistema anterior. Te recomendamos migrar al nuevo sistema simple para mejor rendimiento.</p>
+            <button class="migrate-button" onclick="migrateToSimple()">🚀 Migrar al Sistema Simple</button>
+        </div>
+        
+        <div class="video-container" id="videoContainer" style="display: none;">
+            <video id="videoPlayer" controls>
+                Tu navegador no soporta video HTML5.
             </video>
         </div>
-
-        <!-- Información del video -->
-        <div class="video-info" id="videoInfo">
-            <div class="video-title" id="videoTitle">Cargando video...</div>
-            <div class="video-meta" id="videoMeta">
-                <span>Verificando acceso...</span>
-            </div>
-        </div>
-
-        <!-- Controles adicionales -->
-        <div class="controls-overlay" id="controlsOverlay">
-            <!-- Los controles nativos del video se muestran aquí -->
-        </div>
-
-        <!-- Botón de pantalla completa -->
-        <button class="fullscreen-button" onclick="toggleFullscreen()" title="Pantalla completa">
-            ⛶
-        </button>
-        
-        <!-- Botón de reintentar -->
-        <button class="retry-video-button" onclick="retryVideo()" title="Reintentar video" style="display: none;">
-            🔄
-        </button>
     </div>
 
     <script>
-        // Obtener token de la URL
+        // Extraer token de la URL
         const token = window.location.pathname.split('/').pop();
-        let videoInfo = null;
-        let retryCount = 0;
-        const maxRetries = 3;
-        let isRateLimited = false;
-        let rateLimitRetryCount = 0;
-        const maxRateLimitRetries = 5;
-
-        // Función helper para manejar fetch con rate limiting
-        async function fetchWithRateLimit(url, options = {}) {
-            try {
-                console.log(`🌐 fetchWithRateLimit: ${options.method || 'GET'} ${url}`);
-                const response = await fetch(url, options);
-                console.log(`📡 fetchWithRateLimit respuesta: ${response.status} ${response.statusText}`);
-                
-                // Verificar si es un error 429 (rate limiting)
-                if (response.status === 429) {
-                    let retryAfter = parseInt(response.headers.get('retry-after')) || 2;
-                    console.log(`⏳ Rate limiting detectado: ${retryAfter}s`);
-                    
-                    // Limitar el tiempo máximo de espera a 10 segundos
-                    if (retryAfter > 10) {
-                        retryAfter = 10;
-                        console.log('⏱️ Tiempo de espera limitado a 10 segundos máximo');
-                    }
-                    
-                    // Incrementar contador de reintentos por rate limiting
-                    rateLimitRetryCount++;
-                    
-                    if (rateLimitRetryCount > maxRateLimitRetries) {
-                        console.error('💥 Demasiados reintentos por rate limiting');
-                        throw new Error('Demasiados reintentos por rate limiting. Recarga la página o espera unos minutos.');
-                    }
-                    
-                    console.log(`⏳ Rate limiting activo. Esperando ${retryAfter} segundos... (intento ${rateLimitRetryCount}/${maxRateLimitRetries})`);
-                    
-                    // Mostrar mensaje de rate limiting
-                    showRateLimitMessage(retryAfter);
-                    
-                    // Esperar el tiempo especificado antes de reintentar
-                    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-                    
-                    // Ocultar mensaje de rate limiting
-                    hideRateLimitMessage();
-                    
-                    // Reintentar la solicitud
-                    console.log('🔄 Reintentando fetchWithRateLimit...');
-                    return fetchWithRateLimit(url, options);
-                }
-                
-                // Resetear contador de rate limiting si la solicitud fue exitosa
-                if (response.ok) {
-                    rateLimitRetryCount = 0;
-                    isRateLimited = false;
-                    console.log('✅ fetchWithRateLimit exitoso, contadores reseteados');
-                }
-                
-                return response;
-                
-            } catch (error) {
-                console.error('❌ Error en fetchWithRateLimit:', error);
-                throw error;
-            }
-        }
-
-        // Inicialización
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 DOM cargado, iniciando aplicación...');
-            console.log('🔑 Token extraído:', token);
-            
-            if (!token) {
-                console.error('❌ Token no válido');
-                showError('Token no válido', 'La URL no contiene un token de acceso válido');
-                return;
-            }
-
-            console.log('✅ Token válido, simulando progreso de carga...');
-            // Simular progreso de carga
-            simulateLoadingProgress();
-            
-            console.log('🔐 Llamando a checkAccess()...');
-            // Verificar acceso
-            checkAccess();
-        });
-
-        // Simular progreso de carga
-        function simulateLoadingProgress() {
-            console.log('📊 Iniciando simulación de progreso de carga...');
-            let progress = 0;
-            const progressBar = document.getElementById('progressFill');
-            
-            const interval = setInterval(() => {
-                progress += Math.random() * 15;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(interval);
-                    console.log('📊 Progreso de carga completado al 100%');
-                }
-                progressBar.style.width = progress + '%';
-            }, 200);
-        }
-
-        // Verificar acceso al video
-        async function checkAccess() {
-            try {
-                console.log('🔐 Verificando acceso al video...');
-                const response = await fetchWithRateLimit(`/api/video/check/${token}`);
-                console.log('📡 Respuesta de verificación:', response.status, response.statusText);
-                
-                // Verificar si la respuesta es exitosa
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const result = await response.json();
-                console.log('📋 Resultado de verificación:', result);
-
-                if (result.success && result.data.valid) {
-                    console.log('✅ Acceso verificado correctamente');
-                    // Resetear contadores de reintentos
-                    retryCount = 0;
-                    rateLimitRetryCount = 0;
-                    isRateLimited = false;
-                    
-                    // Ocultar mensajes de rate limiting si existen
-                    hideRateLimitMessage();
-                    
-                    videoInfo = result.data;
-                    console.log('🎬 Llamando a loadVideo()...');
-                    loadVideo();
-                } else {
-                    console.log('❌ Acceso denegado:', result.data?.valid === false ? 'Token inválido o límite excedido' : 'Error desconocido');
-                    showError('Acceso Denegado', result.data?.valid === false ? 'No tienes permiso para ver este video o se ha excedido el límite de vistas' : 'Error al verificar acceso');
-                }
-            } catch (error) {
-                console.error('❌ Error verificando acceso:', error);
-                
-                // Si es un error de rate limiting, no reintentar inmediatamente
-                if (error.message.includes('429')) {
-                    console.log('⏳ Rate limiting detectado, esperando 2 segundos...');
-                    setTimeout(checkAccess, 2000);
-                    return;
-                }
-                
-                // Para otros errores, usar el sistema de reintentos
-                if (retryCount < maxRetries) {
-                    retryCount++;
-                    console.log(`🔄 Reintento ${retryCount}/${maxRetries}`);
-                    setTimeout(checkAccess, 2000);
-                } else {
-                    console.log('💥 Máximo de reintentos alcanzado');
-                    showError('Error de Conexión', 'No se pudo verificar tu acceso. Verifica tu conexión a internet.');
-                }
-            }
-        }
-
-        // Mostrar mensaje de rate limiting
-        function showRateLimitMessage(seconds) {
-            const progressText = document.getElementById('progressText');
-            
-            if (!progressText) {
-                console.error('Elemento progressText no encontrado');
-                return;
-            }
-            
-            // Mostrar mensaje en la pantalla de carga
-            progressText.innerHTML = `
-                <div class="rate-limit-message">
-                    <div class="rate-limit-icon">⏳</div>
-                    <div class="rate-limit-title">Demasiadas solicitudes</div>
-                    <div class="rate-limit-subtitle">Esperando ${seconds} segundos...</div>
-                    <div class="rate-limit-progress">
-                        <div class="rate-limit-bar" style="animation-duration: ${seconds}s;"></div>
-                    </div>
-                </div>
-            `;
-            
-            // También mostrar mensaje flotante si el video ya está cargado
-            if (document.getElementById('videoPlayer').style.display !== 'none') {
-                showFloatingRateLimitMessage(seconds);
-            }
-        }
-
-        // Mostrar mensaje flotante de rate limiting
-        function showFloatingRateLimitMessage(seconds) {
-            // Crear o actualizar mensaje flotante
-            let floatingDiv = document.getElementById('floatingRateLimitMessage');
-            if (!floatingDiv) {
-                floatingDiv = document.createElement('div');
-                floatingDiv.id = 'floatingRateLimitMessage';
-                floatingDiv.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #ffc107;
-                    color: #000;
-                    padding: 15px;
-                    border-radius: 8px;
-                    z-index: 10000;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                    max-width: 300px;
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                `;
-                document.body.appendChild(floatingDiv);
-            }
-            
-            floatingDiv.innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
-                    <div style="font-weight: bold; margin-bottom: 5px;">Problemas de red</div>
-                    <div style="margin-bottom: 15px;">El video está experimentando problemas de conexión</div>
-                    <button onclick="retryVideo()" style="background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-top: 10px;">
-                        🔄 Reintentar
-                    </button>
-                </div>
-            `;
-            
-            // Mostrar botón de reintentar en la interfaz
-            const retryButton = document.querySelector('.retry-video-button');
-            if (retryButton) {
-                retryButton.style.display = 'block';
-            }
-        }
-
-        // Ocultar mensaje de rate limiting
-        function hideRateLimitMessage() {
-            const progressText = document.getElementById('progressText');
-            
-            if (!progressText) {
-                console.error('Elemento progressText no encontrado');
-                return;
-            }
-            
-            progressText.innerHTML = 'Verificando acceso...';
-            
-            // Ocultar mensaje flotante si existe
-            const floatingDiv = document.getElementById('floatingRateLimitMessage');
-            if (floatingDiv) {
-                floatingDiv.remove();
-            }
-        }
-
-        // Cargar video
-        async function loadVideo() {
-            try {
-                console.log('🚀 Iniciando carga del video...');
-                
-                // Ocultar pantalla de carga
-                document.getElementById('loadingScreen').style.display = 'none';
-                console.log('✅ Pantalla de carga ocultada');
-                
-                // Mostrar reproductor
-                document.getElementById('videoPlayer').style.display = 'block';
-                console.log('✅ Reproductor mostrado');
-                
-                // Configurar video con manejo de rate limiting
-                const video = document.getElementById('videoElement');
-                const videoUrl = `/api/video/stream/${token}`;
-                console.log('🎬 URL del video:', videoUrl);
-                
-                // Cargar video directamente sin verificación previa
-                console.log('🎥 Cargando video directamente...');
-                video.src = videoUrl;
-                video.load();
-                console.log('✅ Video.src y video.load() ejecutados');
-
-                // Actualizar información del video
-                updateVideoInfo();
-
-                // Eventos del video
-                video.addEventListener('loadstart', function() {
-                    console.log('🔄 Video comenzando a cargar - loadstart');
-                    
-                    // Agregar timeout para evitar que se quede cargando indefinidamente
-                    setTimeout(() => {
-                        if (video.readyState === 0) { // HAVE_NOTHING
-                            console.log('⏰ Timeout de carga del video, intentando recargar...');
-                            video.load();
-                        }
-                    }, 10000); // 10 segundos de timeout
-                });
-
-                video.addEventListener('loadedmetadata', function() {
-                    console.log('✅ Video cargado correctamente - loadedmetadata');
-                    // Ocultar mensajes de rate limiting si existen
-                    hideRateLimitMessage();
-                });
-
-                video.addEventListener('loadeddata', function() {
-                    console.log('📊 Video ha cargado datos - loadeddata');
-                    // Ocultar mensajes de rate limiting si existen
-                    hideRateLimitMessage();
-                });
-
-                video.addEventListener('canplay', function() {
-                    console.log('▶️ Video listo para reproducirse - canplay');
-                });
-
-                video.addEventListener('canplaythrough', function() {
-                    console.log('🎬 Video puede reproducirse sin interrupciones - canplaythrough');
-                });
-
-                video.addEventListener('progress', function() {
-                    console.log('📈 Video progresando - progress');
-                    // Ocultar mensajes de rate limiting si existen
-                    hideRateLimitMessage();
-                });
-
-                video.addEventListener('error', function(e) {
-                    console.error('Error en el video:', e);
-                    
-                    // Verificar si es un error de red (posiblemente rate limiting)
-                    if (e.target.error && e.target.error.code === 4) {
-                        // Error de red, posiblemente rate limiting
-                        console.log('Error de red detectado, verificando rate limiting...');
-                        showFloatingRateLimitMessage(2);
-                        setTimeout(() => {
-                            hideRateLimitMessage();
-                            // Reintentar cargar el video
-                            video.load();
-                        }, 2000);
-                        return;
-                    }
-                    
-                    // Para otros errores, mostrar mensaje de error
-                    showError('Error de Reproducción', 'No se pudo cargar el video. Intenta recargar la página.');
-                });
-
-                // Agregar listener para errores de red durante la reproducción
-                video.addEventListener('stalled', function() {
-                    console.log('🔄 Video pausado por problemas de red - stalled');
-                    // Solo mostrar mensaje, no reintentar automáticamente
-                    showFloatingRateLimitMessage(3);
-                });
-
-                // Agregar listener para cuando el video está esperando datos
-                video.addEventListener('waiting', function() {
-                    console.log('⏳ Video esperando datos - waiting');
-                    // Solo mostrar mensaje, no reintentar automáticamente
-                    showFloatingRateLimitMessage(3);
-                });
-
-                // Agregar listener para cuando el video se suspende por problemas de red
-                video.addEventListener('suspend', function() {
-                    console.log('⏸️ Video suspendido por problemas de red - suspend');
-                    // Solo mostrar mensaje, no reintentar automáticamente
-                    showFloatingRateLimitMessage(3);
-                });
-
-                // Agregar listener para cuando el video se aborta por problemas de red
-                video.addEventListener('abort', function() {
-                    console.log('🛑 Video abortado por problemas de red - abort');
-                    // Solo mostrar mensaje, no reintentar automáticamente
-                    showFloatingRateLimitMessage(3);
-                });
-
-                // Agregar listener para cuando el video puede reproducirse
-                video.addEventListener('canplay', function() {
-                    console.log('▶️ Video listo para reproducirse - canplay');
-                    // Ocultar mensajes de rate limiting si existen
-                    hideRateLimitMessage();
-                    // Intentar reproducir automáticamente
-                    video.play().catch(err => {
-                        console.log('⚠️ No se pudo reproducir automáticamente:', err.message);
-                    });
-                });
-
-
-
-
-
-
-
-
-
-
-
-
-
-                video.addEventListener('ended', function() {
-                    console.log('🏁 Video terminado - ended');
-                });
-
-                console.log('🎯 Todos los event listeners configurados');
-                console.log('🎬 Video configurado y listo para cargar');
-
-            } catch (error) {
-                console.error('❌ Error cargando video:', error);
-                showError('Error de Carga', 'No se pudo cargar el video desde OneDrive');
-            }
-        }
-
-        // Actualizar información del video
-        function updateVideoInfo() {
-            if (!videoInfo) return;
-
-            const title = document.getElementById('videoTitle');
-            const meta = document.getElementById('videoMeta');
-
-            title.textContent = 'Video Privado';
-            
-            meta.innerHTML = `
-                <span>Expira: ${new Date(videoInfo.expiresAt).toLocaleString()}</span>
-                <span>Vistas: ${videoInfo.currentViews}/${videoInfo.maxViews}</span>
-                ${videoInfo.notes ? `<span>Notas: ${videoInfo.notes}</span>` : ''}
-            `;
-        }
-
-        // Mostrar error
-        function showError(title, message) {
-            document.getElementById('loadingScreen').style.display = 'none';
-            document.getElementById('errorScreen').style.display = 'flex';
-            document.getElementById('errorTitle').textContent = title;
-            document.getElementById('errorMessage').textContent = message;
-        }
-
-        // Reintentar acceso
-        function retryAccess() {
-            retryCount = 0;
-            document.getElementById('errorScreen').style.display = 'none';
-            document.getElementById('loadingScreen').style.display = 'flex';
-            document.getElementById('progressFill').style.width = '0%';
-            
-            simulateLoadingProgress();
-            checkAccess();
-        }
-
-        // Pantalla completa
-        function toggleFullscreen() {
-            const container = document.getElementById('videoContainer');
-            
-            if (!document.fullscreenElement) {
-                container.requestFullscreen().catch(err => {
-                    console.error('Error al entrar en pantalla completa:', err);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        // Atajos de teclado
-        document.addEventListener('keydown', function(e) {
-            const video = document.getElementById('videoElement');
-            
-            switch(e.key) {
-                case ' ':
-                    e.preventDefault();
-                    if (video.paused) {
-                        video.play();
-                    } else {
-                        video.pause();
-                    }
-                    break;
-                case 'f':
-                case 'F':
-                    e.preventDefault();
-                    toggleFullscreen();
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    video.currentTime = Math.max(0, video.currentTime - 10);
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    video.currentTime = Math.min(video.duration, video.currentTime + 10);
-                    break;
-                case 'ArrowUp':
-                    e.preventDefault();
-                    video.volume = Math.min(1, video.volume + 0.1);
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    video.volume = Math.max(0, video.volume - 0.1);
-                    break;
-            }
-        });
-
-        // Detectar cambios de orientación en móviles
-        window.addEventListener('orientationchange', function() {
-            setTimeout(() => {
-                const video = document.getElementById('videoElement');
-                if (video) {
-                    video.style.width = '100%';
-                    video.style.height = '100%';
-                }
-            }, 100);
-        });
-
-        // Prevenir descarga del video
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-        });
-
-        // Prevenir arrastrar el video
-        document.addEventListener('dragstart', function(e) {
-            e.preventDefault();
-        });
-
-        // Log de acceso exitoso
-        function logSuccessfulAccess() {
-            // Esta función se puede usar para analytics
-            console.log('Acceso exitoso al video con token:', token);
+        
+        console.log('🔑 Token extraído:', token);
+        
+        // Variables para rate limiting
+        let requestCount = 0;
+        let lastRequestTime = 0;
+        const RATE_LIMIT_WINDOW = 1000; // 1 segundo
+        const MAX_REQUESTS = 3;
+        
+        // Función para actualizar estado
+        function updateStatus(message, type = 'loading') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
         }
         
-        // Reintentar video
-        function retryVideo() {
-            console.log('🔄 Reintentando video...');
-            const video = document.getElementById('videoElement');
-            if (video) {
-                // Ocultar botón de reintentar
-                document.querySelector('.retry-video-button').style.display = 'none';
-                // Reintentar carga
-                video.load();
+        // Función para actualizar progreso
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+        
+        // Función para fetch con rate limiting
+        async function fetchWithRateLimit(url, options = {}) {
+            const now = Date.now();
+            
+            if (now - lastRequestTime < RATE_LIMIT_WINDOW) {
+                requestCount++;
+                if (requestCount > MAX_REQUESTS) {
+                    throw new Error('Rate limit exceeded');
+                }
+            } else {
+                requestCount = 1;
+                lastRequestTime = now;
+            }
+            
+            console.log(`🌐 fetchWithRateLimit: ${options.method || 'GET'} ${url}`);
+            
+            const response = await fetch(url, options);
+            console.log(`📡 fetchWithRateLimit respuesta: ${response.status} ${response.statusText}`);
+            
+            if (response.status === 200) {
+                console.log('✅ fetchWithRateLimit exitoso, contadores reseteados');
+                requestCount = 0;
+            }
+            
+            return response;
+        }
+        
+        // Función para migrar al sistema simple
+        async function migrateToSimple() {
+            try {
+                updateStatus('🔄 Migrando al sistema simple...', 'loading');
+                
+                const response = await fetchWithRateLimit('/api/video-simple/migrate-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ oldToken: token })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateStatus('✅ Migración exitosa, redirigiendo...', 'success');
+                    setTimeout(() => {
+                        window.location.href = result.link;
+                    }, 2000);
+                } else {
+                    updateStatus('❌ Error en migración: ' + result.error, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error migrando:', error);
+                updateStatus('❌ Error en migración', 'error');
             }
         }
-
-        // Limpiar al salir
-        window.addEventListener('beforeunload', function() {
-            // Limpiar recursos si es necesario
+        
+        // Función para verificar acceso
+        async function checkAccess() {
+            try {
+                updateStatus('🔐 Verificando acceso...', 'loading');
+                updateProgress(20);
+                
+                const response = await fetchWithRateLimit(`/api/video/check/${token}`);
+                const result = await response.json();
+                
+                updateProgress(60);
+                
+                if (result.success && result.valid) {
+                    updateStatus(`✅ Acceso confirmado para: ${result.email}`, 'success');
+                    updateProgress(100);
+                    
+                    // Mostrar video después de 1 segundo
+                    setTimeout(() => {
+                        loadVideo();
+                    }, 1000);
+                    
+                } else {
+                    // Si el token no es válido, mostrar opción de migración
+                    updateStatus('⚠️ Token del sistema anterior detectado', 'error');
+                    document.getElementById('migrationNotice').style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('Error verificando acceso:', error);
+                updateStatus('❌ Error verificando acceso', 'error');
+                // Mostrar opción de migración en caso de error
+                document.getElementById('migrationNotice').style.display = 'block';
+            }
+        }
+        
+        // Función para cargar video
+        function loadVideo() {
+            updateStatus('🎬 Cargando video...', 'loading');
+            
+            const videoContainer = document.getElementById('videoContainer');
+            const videoPlayer = document.getElementById('videoPlayer');
+            
+            // Configurar fuente del video
+            videoPlayer.src = `/api/video/stream/${token}`;
+            
+            // Mostrar contenedor
+            videoContainer.style.display = 'block';
+            
+            // Eventos del video
+            videoPlayer.addEventListener('loadstart', () => {
+                updateStatus('🎬 Iniciando reproducción...', 'success');
+            });
+            
+            videoPlayer.addEventListener('canplay', () => {
+                updateStatus('✅ Video listo para reproducir', 'success');
+            });
+            
+            videoPlayer.addEventListener('error', (e) => {
+                console.error('Error en video:', e);
+                updateStatus('❌ Error reproduciendo video', 'error');
+                // Mostrar opción de migración en caso de error
+                document.getElementById('migrationNotice').style.display = 'block';
+            });
+            
+            // Intentar reproducir
+            videoPlayer.play().catch(e => {
+                console.log('Autoplay bloqueado, usuario debe hacer clic');
+            });
+        }
+        
+        // Iniciar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 DOM cargado, iniciando aplicación...');
+            checkAccess();
         });
     </script>
 </body>
