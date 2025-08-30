@@ -48,17 +48,52 @@
         }
         
         .video-container {
-            margin: 30px 0;
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+            background: rgba(0, 0, 0, 0.8);
             border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
         
-        video {
+        #videoPlayer {
             width: 100%;
-            max-width: 100%;
             height: auto;
-            display: block;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Estilos para los controles del video */
+        #videoPlayer::-webkit-media-controls {
+            background: rgba(0, 0, 0, 0.7);
+        }
+        
+        #videoPlayer::-webkit-media-controls-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+        }
+        
+        #videoPlayer::-webkit-media-controls-play-button {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+        }
+        
+        #videoPlayer::-webkit-media-controls-timeline {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+        
+        #videoPlayer::-webkit-media-controls-current-time-display,
+        #videoPlayer::-webkit-media-controls-time-remaining-display {
+            color: white;
+            font-weight: bold;
+        }
+        
+        #videoPlayer::-webkit-media-controls-volume-slider {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
         }
         
         .error {
@@ -143,6 +178,70 @@
             margin: 15px 0;
             display: none;
         }
+
+        /* Controles personalizados */
+        .custom-controls {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .video-info {
+            color: white;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        
+        .video-info span {
+            margin: 0 5px;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .keyboard-help {
+            margin-top: 10px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            font-style: italic;
+        }
+        
+        .keyboard-help small {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -171,9 +270,27 @@
         </div>
         
         <div class="video-container" id="videoContainer" style="display: none;">
-            <video id="videoPlayer" controls>
-                Tu navegador no soporta video HTML5.
+            <video id="videoPlayer" controls preload="metadata" style="display: none;">
+                <source id="videoSource" src="" type="video/mp4">
+                Tu navegador no soporta el elemento de video.
             </video>
+            
+            <!-- Controles adicionales personalizados -->
+            <div class="custom-controls" id="customControls" style="display: none;">
+                <div class="control-buttons">
+                    <button onclick="skipBackward()" class="control-btn" title="Retroceder 10s (←)">⏪ -10s</button>
+                    <button onclick="skipForward()" class="control-btn" title="Adelantar 10s (→)">+10s ⏩</button>
+                    <button onclick="toggleFullscreen()" class="control-btn" title="Pantalla completa (F)">⛶</button>
+                    <button onclick="toggleMute()" class="control-btn" title="Silenciar (M)">🔊</button>
+                </div>
+                <div class="video-info">
+                    <span id="currentTime">00:00</span> / <span id="totalTime">00:00</span>
+                    <span id="videoProgress">0%</span>
+                </div>
+                <div class="keyboard-help">
+                    <small>💡 Atajos: Espacio/K (Play/Pause) | ← → (10s) | ↑ ↓ (Volumen) | F (Pantalla completa) | M (Silenciar)</small>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -315,36 +432,76 @@
             emailInfo.style.display = 'block';
         }
         
-        // Función para cargar video
+        // Función para cargar el video
         function loadVideo() {
-            updateStatus('🎬 Cargando video...', 'loading');
-            
-            const videoContainer = document.getElementById('videoContainer');
             const videoPlayer = document.getElementById('videoPlayer');
+            const videoContainer = document.getElementById('videoContainer');
+            const emailForm = document.getElementById('emailForm');
+            const customControls = document.getElementById('customControls');
             
-            // Configurar fuente del video
-            videoPlayer.src = `/api/video-simple/stream-simple/${token}`;
-            
-            // Mostrar contenedor
+            // Ocultar formulario y mostrar contenedor de video
+            emailForm.style.display = 'none';
             videoContainer.style.display = 'block';
+            videoPlayer.style.display = 'block';
+            customControls.style.display = 'block';
             
-            // Eventos del video
+            // Configurar la fuente del video
+            const videoSource = document.getElementById('videoSource');
+            videoSource.src = `/api/video-simple/stream-simple/${token}`;
+            
+            // Recargar el video para aplicar la nueva fuente
+            videoPlayer.load();
+            
+            // Configurar eventos del video
             videoPlayer.addEventListener('loadstart', () => {
-                updateStatus('🎬 Iniciando reproducción...', 'success');
+                updateStatus('🔄 Cargando video...', 'loading');
             });
             
             videoPlayer.addEventListener('canplay', () => {
                 updateStatus('✅ Video listo para reproducir', 'success');
+                updateProgress(100);
+                updateVideoInfo(); // Actualizar información inicial
+            });
+            
+            videoPlayer.addEventListener('play', () => {
+                updateStatus('▶️ Reproduciendo video', 'success');
+            });
+            
+            videoPlayer.addEventListener('pause', () => {
+                updateStatus('⏸️ Video pausado', 'info');
+            });
+            
+            videoPlayer.addEventListener('ended', () => {
+                updateStatus('🏁 Video finalizado', 'info');
             });
             
             videoPlayer.addEventListener('error', (e) => {
                 console.error('Error en video:', e);
-                updateStatus('❌ Error reproduciendo video', 'error');
+                updateStatus('❌ Error cargando video', 'error');
             });
             
-            // Intentar reproducir
-            videoPlayer.play().catch(e => {
-                console.log('Autoplay bloqueado, usuario debe hacer clic');
+            videoPlayer.addEventListener('waiting', () => {
+                updateStatus('⏳ Buffering...', 'loading');
+            });
+            
+            videoPlayer.addEventListener('stalled', () => {
+                updateStatus('⚠️ Conexión lenta', 'warning');
+            });
+            
+            // Evento para actualizar información de tiempo
+            videoPlayer.addEventListener('timeupdate', () => {
+                updateVideoInfo();
+            });
+            
+            // Evento para cuando se carga la duración
+            videoPlayer.addEventListener('loadedmetadata', () => {
+                updateVideoInfo();
+            });
+            
+            // Intentar reproducir automáticamente
+            videoPlayer.play().catch(error => {
+                console.log('Reproducción automática bloqueada:', error);
+                updateStatus('▶️ Haz clic en reproducir para comenzar', 'info');
             });
         }
         
@@ -365,6 +522,122 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 DOM cargado, iniciando aplicación simple...');
             checkAccess();
+        });
+
+        // Funciones para controles personalizados
+        function skipBackward() {
+            const video = document.getElementById('videoPlayer');
+            video.currentTime = Math.max(0, video.currentTime - 10);
+        }
+        
+        function skipForward() {
+            const video = document.getElementById('videoPlayer');
+            video.currentTime = Math.min(video.duration, video.currentTime + 10);
+        }
+        
+        function toggleFullscreen() {
+            const video = document.getElementById('videoPlayer');
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.webkitRequestFullscreen) {
+                video.webkitRequestFullscreen();
+            } else if (video.msRequestFullscreen) {
+                video.msRequestFullscreen();
+            }
+        }
+        
+        function toggleMute() {
+            const video = document.getElementById('videoPlayer');
+            video.muted = !video.muted;
+            const muteBtn = document.querySelector('.control-btn[title="Silenciar"]');
+            muteBtn.textContent = video.muted ? '🔇' : '🔊';
+            muteBtn.title = video.muted ? 'Activar sonido' : 'Silenciar';
+        }
+        
+        // Función para actualizar información del video
+        function updateVideoInfo() {
+            const video = document.getElementById('videoPlayer');
+            const currentTimeSpan = document.getElementById('currentTime');
+            const totalTimeSpan = document.getElementById('totalTime');
+            const progressSpan = document.getElementById('videoProgress');
+            
+            if (video.duration && !isNaN(video.duration)) {
+                const currentTime = Math.floor(video.currentTime);
+                const totalTime = Math.floor(video.duration);
+                const progress = Math.round((video.currentTime / video.duration) * 100);
+                
+                currentTimeSpan.textContent = formatTime(currentTime);
+                totalTimeSpan.textContent = formatTime(totalTime);
+                progressSpan.textContent = `${progress}%`;
+            }
+        }
+        
+        // Función para formatear tiempo
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // Atajos de teclado para controles
+        document.addEventListener('keydown', function(e) {
+            const video = document.getElementById('videoPlayer');
+            
+            // Solo aplicar atajos si el video está cargado
+            if (!video.src) return;
+            
+            switch(e.key) {
+                case ' ':
+                case 'k':
+                    e.preventDefault();
+                    if (video.paused) {
+                        video.play();
+                    } else {
+                        video.pause();
+                    }
+                    break;
+                    
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    skipBackward();
+                    break;
+                    
+                case 'ArrowRight':
+                    e.preventDefault();
+                    skipForward();
+                    break;
+                    
+                case 'ArrowUp':
+                    e.preventDefault();
+                    video.volume = Math.min(1, video.volume + 0.1);
+                    break;
+                    
+                case 'ArrowDown':
+                    e.preventDefault();
+                    video.volume = Math.max(0, video.volume - 0.1);
+                    break;
+                    
+                case 'f':
+                    e.preventDefault();
+                    toggleFullscreen();
+                    break;
+                    
+                case 'm':
+                    e.preventDefault();
+                    toggleMute();
+                    break;
+                    
+                case '0':
+                case 'Home':
+                    e.preventDefault();
+                    video.currentTime = 0;
+                    break;
+                    
+                case 'End':
+                    e.preventDefault();
+                    video.currentTime = video.duration;
+                    break;
+            }
         });
     </script>
 </body>
