@@ -94,6 +94,55 @@
             width: 0%;
             transition: width 0.3s ease;
         }
+        
+        .email-form {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .email-input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .email-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .validate-button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .validate-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .email-info {
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -106,6 +155,18 @@
         
         <div class="progress">
             <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="email-form" id="emailForm">
+            <h3>📧 Verificación de Email</h3>
+            <p>Por favor, ingresa tu email para verificar el acceso:</p>
+            <input type="email" class="email-input" id="emailInput" placeholder="tu@email.com" required>
+            <button class="validate-button" onclick="validateEmail()">✅ Verificar Email</button>
+        </div>
+        
+        <div class="email-info" id="emailInfo">
+            <h4>✅ Email Verificado</h4>
+            <p id="emailText"></p>
         </div>
         
         <div class="video-container" id="videoContainer" style="display: none;">
@@ -148,10 +209,8 @@
                     updateStatus(`✅ Acceso confirmado para: ${result.email}`, 'success');
                     updateProgress(100);
                     
-                    // Mostrar video después de 1 segundo
-                    setTimeout(() => {
-                        loadVideo();
-                    }, 1000);
+                    // Mostrar formulario de email para validación
+                    showEmailForm(result.email);
                     
                 } else {
                     updateStatus('❌ Acceso denegado: Token inválido o agotado', 'error');
@@ -161,6 +220,88 @@
                 console.error('Error verificando acceso:', error);
                 updateStatus('❌ Error verificando acceso', 'error');
             }
+        }
+        
+        // Función para mostrar formulario de email
+        function showEmailForm(authorizedEmail) {
+            updateStatus('📧 Verificación de email requerida', 'loading');
+            
+            const emailForm = document.getElementById('emailForm');
+            const emailInput = document.getElementById('emailInput');
+            
+            // Mostrar formulario
+            emailForm.style.display = 'block';
+            
+            // Agregar placeholder con el email autorizado
+            emailInput.placeholder = `Email autorizado: ${authorizedEmail}`;
+            
+            // Enfocar el input
+            emailInput.focus();
+        }
+        
+        // Función para validar email
+        async function validateEmail() {
+            const emailInput = document.getElementById('emailInput');
+            const email = emailInput.value.trim();
+            
+            if (!email) {
+                alert('Por favor, ingresa tu email');
+                return;
+            }
+            
+            if (!email.includes('@')) {
+                alert('Por favor, ingresa un email válido');
+                return;
+            }
+            
+            try {
+                updateStatus('🔐 Validando email...', 'loading');
+                
+                const response = await fetch(`/api/video-simple/check-simple/${token}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.emailValidated) {
+                    updateStatus('✅ Email validado correctamente', 'success');
+                    showEmailInfo(email);
+                    
+                    // Ocultar formulario
+                    document.getElementById('emailForm').style.display = 'none';
+                    
+                    // Mostrar video después de 1 segundo
+                    setTimeout(() => {
+                        loadVideo();
+                    }, 1000);
+                    
+                } else {
+                    updateStatus('❌ Email no autorizado para este token', 'error');
+                    emailInput.style.border = '2px solid #ff4444';
+                    
+                    // Limpiar borde después de 3 segundos
+                    setTimeout(() => {
+                        emailInput.style.border = 'none';
+                    }, 3000);
+                }
+                
+            } catch (error) {
+                console.error('Error validando email:', error);
+                updateStatus('❌ Error validando email', 'error');
+            }
+        }
+        
+        // Función para mostrar información del email
+        function showEmailInfo(email) {
+            const emailInfo = document.getElementById('emailInfo');
+            const emailText = document.getElementById('emailText');
+            
+            emailText.textContent = `Acceso autorizado para: ${email}`;
+            emailInfo.style.display = 'block';
         }
         
         // Función para cargar video
@@ -195,6 +336,13 @@
                 console.log('Autoplay bloqueado, usuario debe hacer clic');
             });
         }
+        
+        // Permitir validar con Enter
+        document.getElementById('emailInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                validateEmail();
+            }
+        });
         
         // Iniciar cuando el DOM esté listo
         document.addEventListener('DOMContentLoaded', () => {
