@@ -4,11 +4,66 @@ const { getGoogleDriveVideoStream } = require('./googledrive');
 
 const router = express.Router();
 
+// Sistema de cache y rate limiting
+const requestCache = new Map();
+const REQUEST_COOLDOWN = 2000; // 2 segundos entre solicitudes por token
+
+// Middleware de rate limiting mejorado
+const rateLimitMiddleware = (req, res, next) => {
+    const { token } = req.params;
+    const now = Date.now();
+    const routePath = req.route.path;
+    const cacheKey = `${token}_${routePath}`;
+    
+    // Para streaming de video, permitir múltiples solicitudes de rangos
+    if (routePath === '/stream/:token') {
+        // Solo aplicar rate limiting a solicitudes sin Range header (inicio del video)
+        if (!req.headers.range) {
+            if (requestCache.has(cacheKey)) {
+                const lastRequest = requestCache.get(cacheKey);
+                const timeDiff = now - lastRequest.timestamp;
+                
+                if (timeDiff < REQUEST_COOLDOWN) {
+                    return res.status(429).json({
+                        error: 'Demasiadas solicitudes',
+                        message: `Espera ${Math.ceil((REQUEST_COOLDOWN - timeDiff) / 1000)} segundos antes de volver a intentar`,
+                        retryAfter: Math.ceil((REQUEST_COOLDOWN - timeDiff) / 1000)
+                    });
+                }
+            }
+            requestCache.set(cacheKey, { timestamp: now });
+        }
+        // Para solicitudes con Range header, permitir siempre
+        return next();
+    }
+    
+    // Para otras rutas, aplicar rate limiting normal
+    if (requestCache.has(cacheKey)) {
+        const lastRequest = requestCache.get(cacheKey);
+        const timeDiff = now - lastRequest.timestamp;
+        
+        if (timeDiff < REQUEST_COOLDOWN) {
+            return res.status(429).json({
+                error: 'Demasiadas solicitudes',
+                message: `Espera ${Math.ceil((REQUEST_COOLDOWN - timeDiff) / 1000)} segundos antes de volver a intentar`,
+                retryAfter: Math.ceil((REQUEST_COOLDOWN - timeDiff) / 1000)
+            });
+        }
+    }
+    
+    requestCache.set(cacheKey, { timestamp: now });
+    next();
+};
+
 // Middleware para verificar acceso al video
 const verifyVideoAccess = (req, res, next) => {
     const { token } = req.params;
+    const route = req.route.path;
+    
+    console.log(`🔐 verifyVideoAccess - Ruta: ${route}, Token: ${token}`);
     
     if (!token) {
+        console.log('❌ Token no proporcionado');
         return res.status(400).json({
             error: 'Token de acceso requerido'
         });
@@ -17,38 +72,59 @@ const verifyVideoAccess = (req, res, next) => {
     // Obtener información del token
     const sql = `SELECT * FROM access_tokens WHERE token = ? AND is_active = 1`;
     
+    console.log(`🔍 Buscando token en BD: ${token}`);
+    
     db.get(sql, [token], (err, accessToken) => {
         if (err) {
-            console.error('Error verificando token:', err);
+            console.error('❌ Error verificando token:', err);
             return res.status(500).json({
                 error: 'Error interno del servidor',
                 message: 'No se pudo verificar el acceso'
             });
         }
         
+        console.log(`📋 Token encontrado en BD:`, accessToken);
+        
         if (!accessToken) {
+            console.log('❌ Token no encontrado o inactivo');
             return res.status(403).json({
                 error: 'Acceso denegado',
                 message: 'Token inválido o expirado'
             });
         }
 
+        console.log(`📊 Verificando límites - Vistas actuales: ${accessToken.current_views}, Máximo: ${accessToken.max_views}`);
+        
         // Verificar si se excedió el número máximo de vistas
         if (accessToken.current_views >= accessToken.max_views) {
+            console.log('❌ Límite de vistas excedido');
+            // Marcar el token como inactivo si se excedió el límite
+            const deactivateSql = `UPDATE access_tokens SET is_active = 0 WHERE token = ?`;
+            db.run(deactivateSql, [token], (err) => {
+                if (err) {
+                    console.error('Error desactivando token:', err);
+                }
+            });
+            
             return res.status(403).json({
                 error: 'Acceso denegado',
                 message: 'Se ha excedido el número máximo de vistas permitidas'
             });
         }
 
+        console.log(`📅 Verificando expiración - Expira: ${accessToken.expires_at}`);
+        
         // Verificar si el token ha expirado
         if (accessToken.expires_at && new Date(accessToken.expires_at) < new Date()) {
+            console.log('❌ Token expirado');
             return res.status(403).json({
                 error: 'Acceso denegado',
                 message: 'El token ha expirado'
             });
         }
 
+        console.log('✅ Token válido, pasando al siguiente middleware');
+        
         // Adjuntar información del token a la request
         req.accessToken = accessToken;
         next();
@@ -73,10 +149,12 @@ router.get('/info/:token', verifyVideoAccess, (req, res) => {
 });
 
 // Stream del video desde Google Drive
-router.get('/stream/:token', verifyVideoAccess, async (req, res) => {
+router.get('/stream/:token', rateLimitMiddleware, verifyVideoAccess, async (req, res) => {
     try {
         const { accessToken } = req;
         const { token } = req.params;
+        
+        console.log('🎬 Iniciando streaming de video...');
         
         // Obtener IP y User-Agent para logging
         const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
@@ -98,6 +176,12 @@ router.get('/stream/:token', verifyVideoAccess, async (req, res) => {
                 error: 'Video no encontrado',
                 message: 'El video no está disponible en Google Drive'
             });
+        }
+
+        // Si tenemos webContentLink, redirigir al cliente
+        if (videoStream.webContentLink) {
+            console.log('🔄 Redirigiendo a webContentLink para streaming directo');
+            return res.redirect(videoStream.webContentLink);
         }
 
         // Configurar headers para streaming
@@ -143,8 +227,10 @@ router.get('/stream/:token', verifyVideoAccess, async (req, res) => {
 });
 
 // Verificar estado del token sin consumir acceso
-router.get('/check/:token', (req, res) => {
+router.get('/check/:token', rateLimitMiddleware, (req, res) => {
     const { token } = req.params;
+    
+    console.log(`🔍 Verificando token: ${token}`);
     
     const sql = `SELECT * FROM access_tokens WHERE token = ? AND is_active = 1`;
     
@@ -158,15 +244,21 @@ router.get('/check/:token', (req, res) => {
         }
         
         if (!accessToken) {
+            console.log('❌ Token no encontrado');
             return res.status(404).json({
                 error: 'Token no encontrado',
                 message: 'El link no es válido o ha expirado'
             });
         }
 
+        console.log(`✅ Token encontrado:`, accessToken);
+
         // Verificar si se puede usar
         const canUse = accessToken.current_views < accessToken.max_views && 
-                      (!accessToken.expires_at || new Date(accessToken.expires_at) > new Date());
+                      (!accessToken.expires_at || new Date(accessToken.expires_at) > new Date()) &&
+                      accessToken.is_active === 1;
+
+        console.log(`📊 Token válido: ${canUse}`);
 
         res.json({
             success: true,

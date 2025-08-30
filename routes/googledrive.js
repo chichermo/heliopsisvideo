@@ -211,4 +211,108 @@ router.get('/status', (req, res) => {
     });
 });
 
-module.exports = router;
+// Obtener stream de video desde Google Drive
+const getGoogleDriveVideoStream = async (fileId) => {
+    try {
+        if (!driveClient) {
+            console.error('❌ Cliente de Google Drive no inicializado');
+            return null;
+        }
+
+        console.log(`🎥 Solicitando video con ID: ${fileId}`);
+        
+        // Obtener información del archivo
+        const fileResponse = await driveClient.files.get({
+            fileId: fileId,
+            fields: 'id,name,size,mimeType'
+        });
+
+        if (!fileResponse.data) {
+            console.error('❌ Archivo no encontrado en Google Drive');
+            return null;
+        }
+
+        const file = fileResponse.data;
+        console.log(`✅ Archivo encontrado: ${file.name} (${file.size} bytes)`);
+
+        // Verificar que sea un video
+        if (!file.mimeType || !file.mimeType.startsWith('video/')) {
+            console.error('❌ El archivo no es un video válido');
+            return null;
+        }
+
+        // Obtener stream del archivo usando alt=media
+        console.log('🔄 Obteniendo stream del archivo...');
+        
+        const streamResponse = await driveClient.files.get({
+            fileId: fileId,
+            alt: 'media'
+        }, {
+            responseType: 'stream',
+            // Agregar headers adicionales para evitar 403
+            headers: {
+                'Accept': 'video/*,*/*',
+                'Accept-Encoding': 'identity'
+            }
+        });
+
+        if (!streamResponse.data) {
+            console.error('❌ No se pudo obtener el stream del archivo');
+            return null;
+        }
+
+        console.log('✅ Stream obtenido exitosamente');
+        
+        return {
+            stream: streamResponse.data,
+            contentLength: parseInt(file.size) || 0,
+            mimeType: file.mimeType,
+            fileName: file.name
+        };
+
+    } catch (error) {
+        console.error('❌ Error al obtener stream del video:', error);
+        
+        // Si es un error 403, intentar con enfoque alternativo
+        if (error.code === 403) {
+            console.log('🔄 Intentando enfoque alternativo para archivo grande...');
+            
+            try {
+                // Intentar obtener solo metadata primero
+                const metadataResponse = await driveClient.files.get({
+                    fileId: fileId,
+                    fields: 'id,name,size,mimeType,webContentLink'
+                });
+                
+                if (metadataResponse.data && metadataResponse.data.webContentLink) {
+                    console.log('✅ Usando webContentLink como alternativa');
+                    
+                    // Crear un stream simulado que redirija al enlace directo
+                    const { PassThrough } = require('stream');
+                    const passThrough = new PassThrough();
+                    
+                    // Simular que el stream está disponible
+                    passThrough.write('Stream disponible via webContentLink');
+                    passThrough.end();
+                    
+                    return {
+                        stream: passThrough,
+                        contentLength: parseInt(metadataResponse.data.size) || 0,
+                        mimeType: metadataResponse.data.mimeType,
+                        fileName: metadataResponse.data.name,
+                        webContentLink: metadataResponse.data.webContentLink
+                    };
+                }
+            } catch (altError) {
+                console.error('❌ Enfoque alternativo también falló:', altError);
+            }
+        }
+        
+        return null;
+    }
+};
+
+module.exports = {
+    router,
+    getGoogleDriveVideoStream
+};

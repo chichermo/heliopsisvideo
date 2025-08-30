@@ -847,18 +847,128 @@
     </div>
 
     <script>
-                 // Variables globales
-         let currentTab = 'dashboard';
-         let tokens = [];
-         let onedriveFiles = [];
+                         // Variables globales
+        let currentTab = 'dashboard';
+        let tokens = [];
+        let onedriveFiles = [];
+        let isRateLimited = false;
+        let rateLimitRetryCount = 0;
+        const maxRateLimitRetries = 5;
 
-                 // Inicialización
-         document.addEventListener('DOMContentLoaded', function() {
-             loadDashboard();
-             loadTokens();
-             checkOneDriveStatus();
-             loadOneDriveFiles();
-         });
+                         // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboard();
+            loadTokens();
+            checkOneDriveStatus();
+            loadOneDriveFiles();
+        });
+
+        // Función helper para manejar fetch con rate limiting
+        async function fetchWithRateLimit(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                
+                // Verificar si es un error 429 (rate limiting)
+                if (response.status === 429) {
+                    let retryAfter = parseInt(response.headers.get('retry-after')) || 2;
+                    
+                    // Limitar el tiempo máximo de espera a 10 segundos
+                    if (retryAfter > 10) {
+                        retryAfter = 10;
+                        console.log('Tiempo de espera limitado a 10 segundos máximo');
+                    }
+                    
+                    // Incrementar contador de reintentos por rate limiting
+                    rateLimitRetryCount++;
+                    
+                    if (rateLimitRetryCount > maxRateLimitRetries) {
+                        console.error('Demasiados reintentos por rate limiting');
+                        throw new Error('Demasiados reintentos por rate limiting. Recarga la página o espera unos minutos.');
+                    }
+                    
+                    console.log(`Rate limiting activo. Esperando ${retryAfter} segundos... (intento ${rateLimitRetryCount}/${maxRateLimitRetries})`);
+                    
+                    // Mostrar mensaje de rate limiting en la interfaz
+                    showRateLimitMessage(retryAfter);
+                    
+                    // Esperar el tiempo especificado antes de reintentar
+                    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                    
+                    // Ocultar mensaje de rate limiting
+                    hideRateLimitMessage();
+                    
+                    // Reintentar la solicitud
+                    return fetchWithRateLimit(url, options);
+                }
+                
+                // Resetear contador de rate limiting si la solicitud fue exitosa
+                if (response.ok) {
+                    rateLimitRetryCount = 0;
+                    isRateLimited = false;
+                }
+                
+                return response;
+                
+            } catch (error) {
+                console.error('Error en fetchWithRateLimit:', error);
+                throw error;
+            }
+        }
+
+        // Mostrar mensaje de rate limiting
+        function showRateLimitMessage(seconds) {
+            // Crear o actualizar mensaje de rate limiting
+            let rateLimitDiv = document.getElementById('rateLimitMessage');
+            if (!rateLimitDiv) {
+                rateLimitDiv = document.createElement('div');
+                rateLimitDiv.id = 'rateLimitMessage';
+                rateLimitDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #ffc107;
+                    color: #000;
+                    padding: 15px;
+                    border-radius: 8px;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    max-width: 300px;
+                `;
+                document.body.appendChild(rateLimitDiv);
+            }
+            
+            rateLimitDiv.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+                    <div style="font-weight: bold; margin-bottom: 5px;">Demasiadas solicitudes</div>
+                    <div style="margin-bottom: 15px;">Esperando ${seconds} segundos...</div>
+                    <div style="width: 100%; height: 4px; background: #333; border-radius: 2px; overflow: hidden;">
+                        <div style="height: 100%; background: #667eea; width: 0%; animation: progressBar ${seconds}s linear forwards;"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Agregar estilos CSS para la animación
+            if (!document.getElementById('rateLimitStyles')) {
+                const style = document.createElement('style');
+                style.id = 'rateLimitStyles';
+                style.textContent = `
+                    @keyframes progressBar {
+                        from { width: 0%; }
+                        to { width: 100%; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+
+        // Ocultar mensaje de rate limiting
+        function hideRateLimitMessage() {
+            const rateLimitDiv = document.getElementById('rateLimitMessage');
+            if (rateLimitDiv) {
+                rateLimitDiv.remove();
+            }
+        }
 
         // Navegación entre tabs
         function showTab(tabName) {
@@ -888,16 +998,16 @@
             }
         }
 
-        // Dashboard
+                // Dashboard
         async function loadDashboard() {
             try {
-                                                 const [statsResponse, googledriveResponse] = await Promise.all([
-                    fetch('/api/access/stats'),
-                    fetch('/api/googledrive/status')
+                const [statsResponse, googledriveResponse] = await Promise.all([
+                    fetchWithRateLimit('/api/access/stats'),
+                    fetchWithRateLimit('/api/googledrive/status')
                 ]);
 
-                 const stats = await statsResponse.json();
-                 const googledrive = await googledriveResponse.json();
+                const stats = await statsResponse.json();
+                const googledrive = await googledriveResponse.json();
 
                 if (stats.success) {
                     document.getElementById('totalTokens').textContent = stats.data.total_tokens || 0;
@@ -960,7 +1070,7 @@
             }
 
             try {
-                const response = await fetch('/api/tokens/create', {
+                const response = await fetchWithRateLimit('/api/tokens/create', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1012,7 +1122,7 @@
             };
 
             try {
-                const response = await fetch('/api/access/generate-bulk', {
+                const response = await fetchWithRateLimit('/api/access/generate-bulk', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1047,7 +1157,7 @@
         // Cargar tokens
         async function loadTokens() {
             try {
-                const response = await fetch('/api/access/tokens');
+                const response = await fetchWithRateLimit('/api/access/tokens');
                 const result = await response.json();
 
                 if (result.success) {
@@ -1098,7 +1208,7 @@
             }
 
             try {
-                const response = await fetch(`/api/access/tokens/${tokenId}`, {
+                const response = await fetchWithRateLimit(`/api/access/tokens/${tokenId}`, {
                     method: 'DELETE'
                 });
 
@@ -1119,11 +1229,11 @@
             }
         }
 
-                         // Verificar estado de Google Drive
+                                 // Verificar estado de Google Drive
         async function checkOneDriveStatus() {
             try {
-                const response = await fetch('/api/googledrive/status');
-                 const result = await response.json();
+                const response = await fetchWithRateLimit('/api/googledrive/status');
+                const result = await response.json();
 
                 if (result.connected !== undefined) {
                     const status = result.connected ? 'Conectado' : 'Desconectado';
@@ -1144,11 +1254,11 @@
             }
         }
 
-                         // Cargar archivos de Google Drive
+                                 // Cargar archivos de Google Drive
         async function loadOneDriveFiles() {
             try {
-                const response = await fetch('/api/googledrive/files');
-                 const result = await response.json();
+                const response = await fetchWithRateLimit('/api/googledrive/files');
+                const result = await response.json();
 
                 if (Array.isArray(result)) {
                     onedriveFiles = result;
@@ -1170,7 +1280,7 @@
         // Cargar videos permitidos
         async function loadAllowedVideos() {
             try {
-                const response = await fetch('/api/videos');
+                const response = await fetchWithRateLimit('/api/videos');
                 const result = await response.json();
 
                 if (result.success) {
@@ -1186,7 +1296,7 @@
         // Cargar videos ocultos
         async function loadHiddenVideos() {
             try {
-                const response = await fetch('/api/videos/hidden');
+                const response = await fetchWithRateLimit('/api/videos/hidden');
                 const result = await response.json();
 
                 if (result.success) {
@@ -1277,7 +1387,7 @@
         // Agregar video a la lista de permitidos
         async function addVideoToAllowed(googleDriveId, name, size, mimeType, createdTime) {
             try {
-                const response = await fetch('/api/videos', {
+                const response = await fetchWithRateLimit('/api/videos', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1312,7 +1422,7 @@
             }
 
             try {
-                const response = await fetch(`/api/videos/${googleDriveId}`, {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}`, {
                     method: 'DELETE'
                 });
 
@@ -1332,7 +1442,7 @@
         // Cambiar estado de un video
         async function toggleVideoStatus(googleDriveId, isActive) {
             try {
-                const response = await fetch(`/api/videos/${googleDriveId}/toggle`, {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}/toggle`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1369,7 +1479,7 @@
         // Actualizar notas de un video
         async function updateVideoNotes(googleDriveId, notes) {
             try {
-                const response = await fetch(`/api/videos/${googleDriveId}/notes`, {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}/notes`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1397,7 +1507,7 @@
         // Mostrar estadísticas de videos
         async function showVideoStats() {
             try {
-                const response = await fetch('/api/videos/stats');
+                const response = await fetchWithRateLimit('/api/videos/stats');
                 const result = await response.json();
 
                 if (result.success) {
@@ -1472,7 +1582,7 @@
         // Mostrar videos eliminados
         async function showDeletedVideos() {
             try {
-                const response = await fetch('/api/videos/deleted');
+                const response = await fetchWithRateLimit('/api/videos/deleted');
                 const result = await response.json();
 
                 if (result.success) {
@@ -1553,7 +1663,7 @@
         // Restaurar video eliminado
         async function restoreVideo(googleDriveId) {
             try {
-                const response = await fetch(`/api/videos/${googleDriveId}/restore`, {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}/restore`, {
                     method: 'PATCH'
                 });
 
@@ -1579,7 +1689,7 @@
             }
 
             try {
-                const response = await fetch(`/api/videos/${googleDriveId}/permanent`, {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}/permanent`, {
                     method: 'DELETE'
                 });
 
@@ -1634,9 +1744,9 @@
                  return;
              }
 
-             try {
-                 const response = await fetch(`/api/googledrive/search?q=${encodeURIComponent(query)}`);
-                 const result = await response.json();
+                         try {
+                const response = await fetchWithRateLimit(`/api/googledrive/search?q=${encodeURIComponent(query)}`);
+                const result = await response.json();
 
                  if (Array.isArray(result)) {
                      onedriveFiles = result;
@@ -1653,7 +1763,7 @@
                          // Obtener URL de autorización
         async function getAuthUrl() {
             try {
-                const response = await fetch('/api/googledrive/auth');
+                const response = await fetchWithRateLimit('/api/googledrive/auth');
                 const result = await response.json();
 
                 if (result.authUrl) {
