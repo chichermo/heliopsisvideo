@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Heliopsis Video - Reproductor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .status {
+            font-size: 1.2em;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .video-container {
+            margin: 30px 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        video {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid #ff4444;
+            color: #ffcccc;
+        }
+        
+        .success {
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #44ff44;
+            color: #ccffcc;
+        }
+        
+        .loading {
+            background: rgba(255, 255, 0, 0.2);
+            border: 2px solid #ffff44;
+            color: #ffffcc;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .migration-notice {
+            background: rgba(255, 165, 0, 0.2);
+            border: 2px solid #ffa500;
+            color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .migrate-button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .migrate-button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🎬 Heliopsis Video</div>
+        
+        <div class="status loading" id="status">
+            🔄 Verificando acceso...
+        </div>
+        
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="migration-notice" id="migrationNotice" style="display: none;">
+            <h3>🔄 Sistema Actualizado</h3>
+            <p>Detectamos que estás usando el sistema anterior. Te recomendamos migrar al nuevo sistema simple para mejor rendimiento.</p>
+            <button class="migrate-button" onclick="migrateToSimple()">🚀 Migrar al Sistema Simple</button>
+        </div>
+        
+        <div class="video-container" id="videoContainer" style="display: none;">
+            <video id="videoPlayer" controls>
+                Tu navegador no soporta video HTML5.
+            </video>
+        </div>
+    </div>
+
+    <script>
+        // Extraer token de la URL
+        const token = window.location.pathname.split('/').pop();
+        
+        console.log('🔑 Token extraído:', token);
+        
+        // Variables para rate limiting
+        let requestCount = 0;
+        let lastRequestTime = 0;
+        const RATE_LIMIT_WINDOW = 1000; // 1 segundo
+        const MAX_REQUESTS = 3;
+        
+        // Función para actualizar estado
+        function updateStatus(message, type = 'loading') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        // Función para actualizar progreso
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+        
+        // Función para fetch con rate limiting
+        async function fetchWithRateLimit(url, options = {}) {
+            const now = Date.now();
+            
+            if (now - lastRequestTime < RATE_LIMIT_WINDOW) {
+                requestCount++;
+                if (requestCount > MAX_REQUESTS) {
+                    throw new Error('Rate limit exceeded');
+                }
+            } else {
+                requestCount = 1;
+                lastRequestTime = now;
+            }
+            
+            console.log(`🌐 fetchWithRateLimit: ${options.method || 'GET'} ${url}`);
+            
+            const response = await fetch(url, options);
+            console.log(`📡 fetchWithRateLimit respuesta: ${response.status} ${response.statusText}`);
+            
+            if (response.status === 200) {
+                console.log('✅ fetchWithRateLimit exitoso, contadores reseteados');
+                requestCount = 0;
+            }
+            
+            return response;
+        }
+        
+        // Función para migrar al sistema simple
+        async function migrateToSimple() {
+            try {
+                updateStatus('🔄 Migrando al sistema simple...', 'loading');
+                
+                const response = await fetchWithRateLimit('/api/video-simple/migrate-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ oldToken: token })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateStatus('✅ Migración exitosa, redirigiendo...', 'success');
+                    setTimeout(() => {
+                        window.location.href = result.link;
+                    }, 2000);
+                } else {
+                    updateStatus('❌ Error en migración: ' + result.error, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error migrando:', error);
+                updateStatus('❌ Error en migración', 'error');
+            }
+        }
+        
+        // Función para verificar acceso
+        async function checkAccess() {
+            try {
+                updateStatus('🔐 Verificando acceso...', 'loading');
+                updateProgress(20);
+                
+                const response = await fetchWithRateLimit(`/api/video/check/${token}`);
+                const result = await response.json();
+                
+                updateProgress(60);
+                
+                if (result.success && result.valid) {
+                    updateStatus(`✅ Acceso confirmado para: ${result.email}`, 'success');
+                    updateProgress(100);
+                    
+                    // Mostrar video después de 1 segundo
+                    setTimeout(() => {
+                        loadVideo();
+                    }, 1000);
+                    
+                } else {
+                    // Si el token no es válido, migrar automáticamente al sistema simple
+                    updateStatus('🔄 Migrando al sistema simple...', 'loading');
+                    await migrateToSimple();
+                }
+                
+            } catch (error) {
+                console.error('Error verificando acceso:', error);
+                updateStatus('🔄 Migrando al sistema simple...', 'loading');
+                await migrateToSimple();
+            }
+        }
+        
+        // Función para cargar video
+        function loadVideo() {
+            updateStatus('🎬 Cargando video...', 'loading');
+            
+            const videoContainer = document.getElementById('videoContainer');
+            const videoPlayer = document.getElementById('videoPlayer');
+            
+            // Configurar fuente del video
+            videoPlayer.src = `/api/video/stream/${token}`;
+            
+            // Mostrar contenedor
+            videoContainer.style.display = 'block';
+            
+            // Eventos del video
+            videoPlayer.addEventListener('loadstart', () => {
+                updateStatus('🎬 Iniciando reproducción...', 'success');
+            });
+            
+            videoPlayer.addEventListener('canplay', () => {
+                updateStatus('✅ Video listo para reproducir', 'success');
+            });
+            
+            videoPlayer.addEventListener('error', (e) => {
+                console.error('Error en video:', e);
+                updateStatus('❌ Error reproduciendo video', 'error');
+                // Mostrar opción de migración en caso de error
+                document.getElementById('migrationNotice').style.display = 'block';
+            });
+            
+            // Intentar reproducir
+            videoPlayer.play().catch(e => {
+                console.log('Autoplay bloqueado, usuario debe hacer clic');
+            });
+        }
+        
+        // Iniciar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 DOM cargado, iniciando aplicación...');
+            checkAccess();
+        });
+    </script>
+</body>
+</html>

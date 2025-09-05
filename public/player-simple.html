@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Heliopsis Video - Player</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            overflow-x: hidden;
+            animation: gradientShift 10s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #2d2d2d 100%); }
+            50% { background: linear-gradient(135deg, #1a1a1a 0%, #000000 50%, #2d2d2d 100%); }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: 25px;
+            margin-top: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .container:hover {
+            transform: translateY(-5px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .logo {
+            width: 120px;
+            height: auto;
+            margin: 0 auto 20px;
+            display: block;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+            animation: logoGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes logoGlow {
+            0% { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)); }
+            100% { filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.6)); }
+        }
+        
+        .title {
+            background: linear-gradient(45deg, #ffffff, #e0e0e0, #cccccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            font-weight: 800;
+            text-align: center;
+            animation: titleGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes titleGlow {
+            0% { filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3)); }
+            100% { filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.6)); }
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            color: #cccccc;
+        }
+        
+        .status-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.15));
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .status-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        
+        .status-message {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #ffffff, #e0e0e0);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .auth-form {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.15));
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        input::placeholder {
+            color: #999;
+        }
+        
+        .auth-btn {
+            background: linear-gradient(45deg, #ffffff, #e0e0e0, #cccccc);
+            background-size: 200% 200%;
+            color: #000000;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: gradientMove 3s ease infinite;
+        }
+        
+        @keyframes gradientMove {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .auth-btn:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(255, 255, 255, 0.4), 0 5px 15px rgba(255, 255, 255, 0.3);
+        }
+        
+        .auth-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .auth-btn:hover::before {
+            left: 100%;
+        }
+        
+        .video-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .video-player {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+        }
+        
+        .video-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .video-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .video-tab {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .video-tab.active {
+            background: linear-gradient(45deg, #ffffff, #e0e0e0);
+            color: #000000;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .video-tab:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .video-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .error-message {
+            background: rgba(255, 107, 107, 0.2);
+            border: 2px solid #ff6b6b;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            color: #ff6b6b;
+        }
+        
+        .success-message {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            color: #ffffff;
+        }
+        
+        .keyboard-shortcuts {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        
+        .keyboard-shortcuts h4 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .shortcut {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 0 2px;
+            font-family: monospace;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .logo {
+                font-size: 2em;
+            }
+            
+            .video-controls {
+                flex-direction: column;
+            }
+            
+            .control-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/logo.png" alt="Heliopsis Logo" class="logo">
+            <div class="title"><i class="fas fa-video"></i> Heliopsis Video Player</div>
+            <div class="subtitle"><i class="fas fa-shield-alt"></i> Secure Video Access</div>
+        </div>
+        
+        <!-- Estado de Verificación -->
+        <div id="statusCard" class="status-card">
+            <div class="status-icon"><i class="fas fa-search"></i></div>
+            <div class="status-message">Verifying access...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <!-- Formulario de Autenticación -->
+        <div id="authForm" class="auth-form" style="display: none;">
+            <h3><i class="fas fa-lock"></i> Access Verification</h3>
+            <p>Please enter your email and password to access the content.</p>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email"><i class="fas fa-envelope"></i> Email:</label>
+                    <input type="email" id="email" name="email" placeholder="your@email.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password"><i class="fas fa-key"></i> Password:</label>
+                    <input type="password" id="password" name="password" placeholder="Password" required>
+                </div>
+                
+                <button type="submit" class="auth-btn"><i class="fas fa-check"></i> Verify Access</button>
+            </form>
+        </div>
+        
+        <!-- Reproductor de Video -->
+        <div id="videoContainer" class="video-container" style="display: none;">
+            <div class="video-selector" id="videoSelector">
+                <!-- Los tabs de video se generarán dinámicamente -->
+            </div>
+            
+            <video id="videoPlayer" class="video-player" controls 
+                   oncontextmenu="return false;" 
+                   onselectstart="return false;" 
+                   ondragstart="return false;"
+                   ondrop="return false;"
+                   oncopy="return false;"
+                   oncut="return false;"
+                   onpaste="return false;">
+                Your browser does not support the video element.
+            </video>
+            
+            <div class="video-controls">
+                <button class="control-btn" onclick="skipVideo(10)"><i class="fas fa-forward"></i> +10s</button>
+                <button class="control-btn" onclick="skipVideo(-10)"><i class="fas fa-backward"></i> -10s</button>
+                <button class="control-btn" onclick="toggleFullscreen()"><i class="fas fa-expand"></i> Fullscreen</button>
+                <button class="control-btn" onclick="toggleMute()"><i class="fas fa-volume-mute"></i> Mute</button>
+                <button class="control-btn" onclick="setPlaybackRate(1.25)">1.25x</button>
+                <button class="control-btn" onclick="setPlaybackRate(1.5)">1.5x</button>
+                <button class="control-btn" onclick="setPlaybackRate(1)">1x</button>
+            </div>
+            
+            <div class="video-info">
+                <p><strong>Authorized Email:</strong> <span id="authorizedEmail"></span></p>
+                <p><strong>Views Used:</strong> <span id="viewsUsed"></span></p>
+            </div>
+            
+            <div class="keyboard-shortcuts">
+                <h4><i class="fas fa-keyboard"></i> Keyboard Shortcuts</h4>
+                <p>
+                    <span class="shortcut">Space</span> Play/Pause | 
+                    <span class="shortcut">←</span> -10s | 
+                    <span class="shortcut">→</span> +10s | 
+                    <span class="shortcut">F</span> Fullscreen | 
+                    <span class="shortcut">M</span> Mute
+                </p>
+            </div>
+        </div>
+        
+        <!-- Mensajes de Error/Éxito -->
+        <div id="messageContainer"></div>
+    </div>
+
+    <script>
+        // Obtener token de la URL
+        const token = window.location.pathname.split('/').pop();
+        let currentVideoIndex = 0;
+        let videoIds = [];
+        let authorizedEmail = '';
+        
+        // Elementos del DOM
+        const statusCard = document.getElementById('statusCard');
+        const authForm = document.getElementById('authForm');
+        const videoContainer = document.getElementById('videoContainer');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoSelector = document.getElementById('videoSelector');
+        const messageContainer = document.getElementById('messageContainer');
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAccess();
+            setupKeyboardShortcuts();
+            setupDownloadProtection();
+        });
+        
+        // Configurar protección contra descargas
+        function setupDownloadProtection() {
+            // Deshabilitar menú contextual solo en el video
+            videoPlayer.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Deshabilitar teclas de acceso directo para descarga (más específicas)
+            document.addEventListener('keydown', (e) => {
+                // Solo bloquear Ctrl+S y Ctrl+Shift+S para descarga
+                if ((e.ctrlKey && (e.key === 's' || e.key === 'S')) || 
+                    (e.ctrlKey && e.shiftKey && (e.key === 's' || e.key === 'S'))) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showMessage('<i class="fas fa-shield-alt"></i> Download blocked for security', 'warning');
+                    return false;
+                }
+            });
+            
+            // Bloquear arrastrar y soltar solo del video
+            videoPlayer.addEventListener('dragstart', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            videoPlayer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Bloquear selección de texto solo del video
+            videoPlayer.addEventListener('selectstart', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Bloquear copiar/pegar solo del video
+            videoPlayer.addEventListener('copy', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            videoPlayer.addEventListener('cut', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            videoPlayer.addEventListener('paste', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Protección específica para el video
+            videoPlayer.addEventListener('loadstart', () => {
+                // Deshabilitar controles nativos de descarga
+                videoPlayer.controls = true;
+                videoPlayer.autoplay = false;
+                videoPlayer.preload = 'metadata';
+                
+                // Agregar atributos de protección
+                videoPlayer.setAttribute('controlsList', 'nodownload nofullscreen noremoteplayback');
+                videoPlayer.setAttribute('disablePictureInPicture', 'true');
+                videoPlayer.setAttribute('disableRemotePlayback', 'true');
+            });
+            
+            // Bloquear eventos de descarga del video
+            videoPlayer.addEventListener('loadedmetadata', () => {
+                // Deshabilitar descarga por URL directa
+                if (videoPlayer.src) {
+                    const originalSrc = videoPlayer.src;
+                    videoPlayer.addEventListener('error', () => {
+                        // Si hay error, intentar recargar con token
+                        videoPlayer.src = originalSrc;
+                    });
+                }
+            });
+            
+            console.log('🛡️ Download protection activated (video-specific)');
+        }
+        
+        // Verificar acceso al token
+        async function checkAccess() {
+            try {
+                updateStatus('<i class="fas fa-search"></i> Verifying token...', 20);
+                
+                const response = await fetch(`/api/video-simple/check-simple/${token}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus('<i class="fas fa-check"></i> Token valid', 60);
+                    
+                    // Show authentication form
+                    showEmailForm(data.data);
+                } else {
+                    showError('<i class="fas fa-times"></i> Invalid or expired token');
+                }
+            } catch (error) {
+                console.error('Error verifying token:', error);
+                showError('<i class="fas fa-exclamation-triangle"></i> Error verifying access');
+            }
+        }
+        
+        // Show email and password form
+        function showEmailForm(tokenData) {
+            updateStatus('<i class="fas fa-lock"></i> Authentication required', 80);
+            
+            videoIds = tokenData.video_ids;
+            authorizedEmail = tokenData.email;
+            
+            setTimeout(() => {
+                statusCard.style.display = 'none';
+                authForm.style.display = 'block';
+            }, 1000);
+        }
+        
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`/api/video-simple/check-simple/${token}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('<i class="fas fa-check"></i> Access authorized');
+                    loadVideoPlayer(data.data);
+                } else {
+                    showError('<i class="fas fa-times"></i> Incorrect credentials');
+                }
+            } catch (error) {
+                console.error('Error validating credentials:', error);
+                showError('<i class="fas fa-exclamation-triangle"></i> Error validating credentials');
+            }
+        });
+        
+        // Load video player
+        function loadVideoPlayer(tokenData) {
+            setTimeout(() => {
+                authForm.style.display = 'none';
+                videoContainer.style.display = 'block';
+                
+                // Configure user information
+                document.getElementById('authorizedEmail').textContent = tokenData.email;
+                document.getElementById('viewsUsed').textContent = `${tokenData.views}/${tokenData.max_views}`;
+                
+                // Create video selector
+                createVideoSelector();
+                
+                // Load first video
+                if (videoIds.length > 0) {
+                    loadVideo(videoIds[0], 0);
+                }
+            }, 1000);
+        }
+        
+        // Create video selector
+        function createVideoSelector() {
+            videoSelector.innerHTML = '';
+            
+            // Get video names from Google Drive
+            fetch('/api/googledrive/files')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        const videoMap = {};
+                        data.data.forEach(video => {
+                            videoMap[video.id] = video.name;
+                        });
+                        
+                        videoIds.forEach((videoId, index) => {
+                            const videoName = videoMap[videoId] || `Video ${index + 1}`;
+                            
+                            const tab = document.createElement('button');
+                            tab.className = 'video-tab';
+                            tab.textContent = videoName;
+                            tab.onclick = () => switchVideo(index);
+                            
+                            if (index === 0) {
+                                tab.classList.add('active');
+                            }
+                            
+                            videoSelector.appendChild(tab);
+                        });
+                        
+                        // Load first video
+                        if (videoIds.length > 0) {
+                            loadVideo(videoIds[0], 0);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading video names:', error);
+                    // Fallback with generic names
+                    videoIds.forEach((videoId, index) => {
+                        const videoName = `Video ${index + 1}`;
+                        
+                        const tab = document.createElement('button');
+                        tab.className = 'video-tab';
+                        tab.textContent = videoName;
+                        tab.onclick = () => switchVideo(index);
+                        
+                        if (index === 0) {
+                            tab.classList.add('active');
+                        }
+                        
+                        videoSelector.appendChild(tab);
+                    });
+                    
+                    // Load first video
+                    if (videoIds.length > 0) {
+                        loadVideo(videoIds[0], 0);
+                    }
+                });
+        }
+        
+        // Switch video
+        function switchVideo(index) {
+            currentVideoIndex = index;
+            
+            // Actualizar tabs activos
+            document.querySelectorAll('.video-tab').forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            
+            // Cargar video
+            loadVideo(videoIds[index], index);
+        }
+        
+        // Load specific video
+        function loadVideo(videoId, index) {
+            const videoName = index === 0 ? 'DEEL 1.mp4' : 'DEEL 2.mp4';
+            const videoUrl = `/api/video-simple/stream-simple/${token}/${videoId}`;
+            
+            console.log(`🎬 Loading video: ${videoName} (ID: ${videoId})`);
+            console.log(`🔗 Video URL: ${videoUrl}`);
+            
+            videoPlayer.src = videoUrl;
+            videoPlayer.load();
+            
+            // Show loading message
+            showMessage(`<i class="fas fa-video"></i> Loading ${videoName}...`, 'info');
+            
+            // Add error handling
+            videoPlayer.addEventListener('error', (e) => {
+                console.error('❌ Video loading error:', e);
+                console.error('Video error details:', videoPlayer.error);
+                showError(`<i class="fas fa-exclamation-triangle"></i> Error loading ${videoName}`);
+            });
+            
+            videoPlayer.addEventListener('loadeddata', () => {
+                console.log(`✅ Video loaded successfully: ${videoName}`);
+                showMessage(`<i class="fas fa-check"></i> Video ready to play`, 'success');
+            });
+        }
+        
+        // Controles de video
+        function skipVideo(seconds) {
+            videoPlayer.currentTime += seconds;
+        }
+        
+        function toggleFullscreen() {
+            if (videoPlayer.requestFullscreen) {
+                videoPlayer.requestFullscreen();
+            } else if (videoPlayer.webkitRequestFullscreen) {
+                videoPlayer.webkitRequestFullscreen();
+            } else if (videoPlayer.msRequestFullscreen) {
+                videoPlayer.msRequestFullscreen();
+            }
+        }
+        
+        function toggleMute() {
+            videoPlayer.muted = !videoPlayer.muted;
+        }
+        
+        function setPlaybackRate(rate) {
+            videoPlayer.playbackRate = rate;
+        }
+        
+        // Configurar atajos de teclado
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if (videoContainer.style.display === 'none') return;
+                
+                switch(e.code) {
+                    case 'Space':
+                        e.preventDefault();
+                        if (videoPlayer.paused) {
+                            videoPlayer.play();
+                        } else {
+                            videoPlayer.pause();
+                        }
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        skipVideo(-10);
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        skipVideo(10);
+                        break;
+                    case 'KeyF':
+                        e.preventDefault();
+                        toggleFullscreen();
+                        break;
+                    case 'KeyM':
+                        e.preventDefault();
+                        toggleMute();
+                        break;
+                }
+            });
+        }
+        
+        // Funciones de utilidad
+        function updateStatus(message, progress) {
+            document.querySelector('.status-message').textContent = message;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+        
+        function showError(message) {
+            messageContainer.innerHTML = `<div class="error-message">${message}</div>`;
+        }
+        
+        function showSuccess(message) {
+            messageContainer.innerHTML = `<div class="success-message">${message}</div>`;
+        }
+        
+        function showMessage(message, type = 'info') {
+            const className = type === 'error' ? 'error-message' : 'success-message';
+            messageContainer.innerHTML = `<div class="${className}">${message}</div>`;
+            
+            setTimeout(() => {
+                messageContainer.innerHTML = '';
+            }, 3000);
+        }
+        
+        // Eventos del video
+        videoPlayer.addEventListener('loadstart', () => {
+            showMessage('<i class="fas fa-spinner fa-spin"></i> Loading video...', 'info');
+        });
+        
+        videoPlayer.addEventListener('canplay', () => {
+            showMessage('<i class="fas fa-check"></i> Video ready to play', 'success');
+        });
+        
+        videoPlayer.addEventListener('error', () => {
+            showError('<i class="fas fa-exclamation-triangle"></i> Error loading video');
+        });
+    </script>
+</body>
+</html>
