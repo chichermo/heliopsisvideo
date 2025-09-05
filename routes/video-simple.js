@@ -442,7 +442,11 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                 
                 // Fallback: Redirección a webContentLink
                 if (streamResult && streamResult.webContentLink) {
-                    console.log('🔄 Redirigiendo a webContentLink como fallback');
+                    if (streamResult.isLargeFile) {
+                        console.log('🔄 Redirigiendo a webContentLink para archivo grande');
+                    } else {
+                        console.log('🔄 Redirigiendo a webContentLink como fallback');
+                    }
                     
                     // Configurar headers para redirección
                     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -455,6 +459,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                     res.setHeader('Content-Disposition', 'inline; filename=""');
                     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
                     
+                    // Para archivos grandes, usar redirección 302 temporal
                     return res.redirect(302, streamResult.webContentLink);
                 }
                 

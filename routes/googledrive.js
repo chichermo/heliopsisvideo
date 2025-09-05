@@ -411,12 +411,48 @@ const getGoogleDriveVideoStream = async (videoId) => {
 
         console.log(`🎥 Solicitando video con ID: ${fileId}`);
         
-        // PRIMERA OPCIÓN: Intentar stream directo
+        // PRIMERA OPCIÓN: Para videos grandes, usar webContentLink directamente
         try {
-            console.log('🔄 Intentando stream directo...');
+            console.log('🔄 Obteniendo metadata del archivo...');
             console.log('📋 Detalles de la solicitud:');
             console.log('  - File ID:', fileId);
             console.log('  - Cliente inicializado:', !!driveClient);
+            
+            const metadataResponse = await driveClient.files.get({
+                fileId: fileId,
+                fields: 'id,name,size,mimeType,webContentLink'
+            });
+            
+            console.log('📋 Metadata obtenida:', {
+                id: metadataResponse.data?.id,
+                name: metadataResponse.data?.name,
+                size: metadataResponse.data?.size,
+                mimeType: metadataResponse.data?.mimeType,
+                hasWebContentLink: !!metadataResponse.data?.webContentLink
+            });
+            
+            // Para videos grandes (>1GB), usar webContentLink directamente
+            const fileSize = parseInt(metadataResponse.data?.size) || 0;
+            const isLargeFile = fileSize > 1073741824; // 1GB
+            
+            if (isLargeFile) {
+                console.log(`📊 Archivo grande detectado (${(fileSize / 1073741824).toFixed(2)} GB) - usando webContentLink`);
+                
+                if (metadataResponse.data && metadataResponse.data.webContentLink) {
+                    console.log('✅ webContentLink obtenido para archivo grande:', metadataResponse.data.webContentLink);
+                    
+                    return {
+                        redirect: true,
+                        webContentLink: metadataResponse.data.webContentLink,
+                        size: metadataResponse.data.size,
+                        name: metadataResponse.data.name,
+                        isLargeFile: true
+                    };
+                }
+            }
+            
+            // Para archivos pequeños, intentar stream directo
+            console.log('🔄 Intentando stream directo para archivo pequeño...');
             
             const streamResponse = await driveClient.files.get({
                 fileId: fileId,
