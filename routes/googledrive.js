@@ -441,9 +441,13 @@ const getGoogleDriveVideoStream = async (videoId) => {
                 if (metadataResponse.data && metadataResponse.data.webContentLink) {
                     console.log('✅ webContentLink obtenido para archivo grande:', metadataResponse.data.webContentLink);
                     
+                    // Para videos grandes, usar URL directa de Google Drive que funciona sin autenticación
+                    const directUrl = `https://drive.google.com/uc?id=${fileId}&export=download`;
+                    console.log('🔄 Usando URL directa para archivo grande:', directUrl);
+                    
                     return {
                         redirect: true,
-                        webContentLink: metadataResponse.data.webContentLink,
+                        webContentLink: directUrl,
                         size: metadataResponse.data.size,
                         name: metadataResponse.data.name,
                         isLargeFile: true
@@ -503,9 +507,13 @@ const getGoogleDriveVideoStream = async (videoId) => {
                     console.log('📊 Tamaño del archivo:', metadataResponse.data.size, 'bytes');
                     console.log('📝 Nombre del archivo:', metadataResponse.data.name);
                     
+                    // Usar URL directa que funciona sin autenticación
+                    const directUrl = `https://drive.google.com/uc?id=${fileId}&export=download`;
+                    console.log('🔄 Usando URL directa como fallback:', directUrl);
+                    
                     return {
                         redirect: true,
-                        webContentLink: metadataResponse.data.webContentLink,
+                        webContentLink: directUrl,
                         size: metadataResponse.data.size,
                         name: metadataResponse.data.name
                     };
