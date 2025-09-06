@@ -561,19 +561,26 @@
             try {
                 updateStatus('<i class="fas fa-search"></i> Verifying token...', 20);
                 
+                console.log(`🔍 Frontend: Verificando token ${token}`);
                 const response = await fetch(`/api/video-simple/check-simple/${token}`);
+                console.log(`📡 Frontend: Response status: ${response.status}`);
+                
                 const data = await response.json();
+                console.log(`📋 Frontend: Response data:`, data);
                 
                 if (data.success) {
+                    console.log(`✅ Frontend: Token válido, mostrando formulario`);
                     updateStatus('<i class="fas fa-check"></i> Token valid', 60);
                     
                     // Show authentication form
                     showEmailForm(data.data);
                 } else {
+                    console.log(`❌ Frontend: Token inválido:`, data.error);
                     showError('<i class="fas fa-times"></i> Invalid or expired token');
                 }
             } catch (error) {
-                console.error('Error verifying token:', error);
+                console.error('❌ Frontend: Error verifying token:', error);
+                console.error('❌ Frontend: Error details:', error.message);
                 showError('<i class="fas fa-exclamation-triangle"></i> Error verifying access');
             }
         }
