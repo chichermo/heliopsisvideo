@@ -248,6 +248,14 @@ router.get('/check-simple/:token', async (req, res) => {
                 });
             }
             
+            console.log(`✅ Token ${token} válido encontrado:`, {
+                email: row.email,
+                video_ids: row.video_ids,
+                views: row.views,
+                max_views: row.max_views,
+                is_active: row.is_active
+            });
+            
             res.json({
                 success: true,
                 data: {
@@ -263,7 +271,8 @@ router.get('/check-simple/:token', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Error verificando token:', error);
+        console.error('❌ Error verificando token:', error);
+        console.error('❌ Stack trace:', error.stack);
         res.status(500).json({ 
             success: false, 
             error: 'Error interno del servidor' 
