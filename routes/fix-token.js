@@ -34,18 +34,33 @@ router.get('/fix-token/:token', (req, res) => {
             is_active: row.is_active
         });
         
-        // Actualizar con las credenciales correctas
-        const updateQuery = `
-            UPDATE simple_tokens 
-            SET email = ?, password = ?, notes = ?
-            WHERE token = ?
+        // Usar INSERT OR REPLACE para forzar la inserción/actualización
+        const insertOrReplaceQuery = `
+            INSERT OR REPLACE INTO simple_tokens (
+                token, email, password, video_ids, max_views, views, 
+                is_active, notes, payment_status, created_at, last_accessed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         
         const email = 'erienpoppe@gmail.com';
         const password = 'kxg8AsFg';
+        const video_ids = '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD,1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE';
         const notes = 'Token real recuperado - Acceso permanente garantizado';
+        const now = new Date().toISOString();
         
-        db.run(updateQuery, [email, password, notes, token], function(err) {
+        db.run(insertOrReplaceQuery, [
+            token,
+            email,
+            password,
+            video_ids,
+            999999, // max_views
+            0, // views
+            1, // is_active
+            notes,
+            'paid', // payment_status
+            now, // created_at
+            now  // last_accessed
+        ], function(err) {
             if (err) {
                 console.error('❌ Error actualizando token:', err);
                 return res.status(500).json({ 
@@ -55,7 +70,7 @@ router.get('/fix-token/:token', (req, res) => {
                 });
             }
             
-            console.log(`✅ Token actualizado: ${this.changes} filas afectadas`);
+            console.log(`✅ Token insertado/actualizado: ${this.changes} filas afectadas`);
             
             // Verificar la actualización
             db.get(checkQuery, [token], (err, updatedRow) => {
@@ -75,13 +90,18 @@ router.get('/fix-token/:token', (req, res) => {
                 
                 res.json({
                     success: true,
-                    message: 'Token actualizado correctamente',
+                    message: 'Token insertado/actualizado correctamente',
                     data: {
                         token: updatedRow.token,
                         email: updatedRow.email,
                         password: updatedRow.password,
+                        video_ids: updatedRow.video_ids,
+                        max_views: updatedRow.max_views,
+                        views: updatedRow.views,
                         is_active: updatedRow.is_active,
-                        notes: updatedRow.notes
+                        notes: updatedRow.notes,
+                        created_at: updatedRow.created_at,
+                        last_accessed: updatedRow.last_accessed
                     }
                 });
             });
