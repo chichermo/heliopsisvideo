@@ -1,4 +1,4 @@
-const { db } = require('./database/init');
+const { db } = require('./init');
 
 console.log('🔧 Actualizando credenciales del token en Render...');
 
