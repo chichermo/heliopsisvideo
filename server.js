@@ -13,7 +13,7 @@ const videoManagementRoutes = require('./routes/videos');
 const tokenRoutes = require('./routes/tokens');
 const testTokenRoutes = require('./routes/test-token');
 const dbStatusRoutes = require('./routes/db-status');
-const fixTokenRoutes = require('./routes/fix-token');
+const emergencyTokenRoutes = require('./routes/emergency-token');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -121,7 +121,7 @@ app.use('/api/videos', videoManagementRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/test', testTokenRoutes);
 app.use('/api/debug', dbStatusRoutes);
-app.use('/api/fix', fixTokenRoutes);
+app.use('/api/emergency', emergencyTokenRoutes);
 
 // Ruta principal para el panel de administración
 app.get('/admin', (req, res) => {

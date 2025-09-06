@@ -562,7 +562,7 @@
                 updateStatus('<i class="fas fa-search"></i> Verifying token...', 20);
                 
                 console.log(`🔍 Frontend: Verificando token ${token}`);
-                const response = await fetch(`/api/video-simple/check-simple/${token}`);
+                const response = await fetch(`/api/emergency/emergency-token/${token}`);
                 console.log(`📡 Frontend: Response status: ${response.status}`);
                 
                 const data = await response.json();
@@ -606,7 +606,7 @@
             const password = document.getElementById('password').value;
             
             try {
-                const response = await fetch(`/api/video-simple/check-simple/${token}`, {
+                const response = await fetch(`/api/emergency/emergency-token/${token}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
