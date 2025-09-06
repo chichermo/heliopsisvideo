@@ -227,7 +227,7 @@ router.get('/check-simple/:token', async (req, res) => {
         
         console.log(`🔍 Verificando token simple: ${token}`);
         
-        const query = 'SELECT * FROM simple_tokens WHERE token = ? AND is_active = 1';
+        const query = 'SELECT * FROM simple_tokens WHERE token = ? AND (is_active = 1 OR is_active = "1" OR is_active = true)';
         
         db.get(query, [token], (err, row) => {
             if (err) {
@@ -290,7 +290,7 @@ router.post('/check-simple/:token', async (req, res) => {
         console.log(`📧 Email recibido: ${email}`);
         console.log(`🔑 Password recibido: ${password}`);
         
-        const query = 'SELECT * FROM simple_tokens WHERE token = ? AND email = ? AND password = ? AND is_active = 1';
+        const query = 'SELECT * FROM simple_tokens WHERE token = ? AND email = ? AND password = ? AND (is_active = 1 OR is_active = "1" OR is_active = true)';
         
         db.get(query, [token, email, password], (err, row) => {
             if (err) {
