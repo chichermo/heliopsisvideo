@@ -286,18 +286,30 @@ router.post('/check-simple/:token', async (req, res) => {
         const { token } = req.params;
         const { email, password } = req.body;
         
+        console.log(`🔍 POST check-simple - Token: ${token}`);
+        console.log(`📧 Email recibido: ${email}`);
+        console.log(`🔑 Password recibido: ${password}`);
+        
         const query = 'SELECT * FROM simple_tokens WHERE token = ? AND email = ? AND password = ? AND is_active = 1';
         
         db.get(query, [token, email, password], (err, row) => {
             if (err) {
-                console.error('Error validando credenciales:', err);
+                console.error('❌ Error validando credenciales:', err);
                 return res.status(500).json({ 
                     success: false, 
                     error: 'Error validando credenciales' 
                 });
             }
             
+            console.log(`📋 Resultado de consulta POST:`, row);
+            
             if (!row) {
+                console.log(`❌ Credenciales no coinciden para token ${token}`);
+                console.log(`📧 Email esperado: usuario@ejemplo.com`);
+                console.log(`🔑 Password esperado: password123`);
+                console.log(`📧 Email recibido: ${email}`);
+                console.log(`🔑 Password recibido: ${password}`);
+                
                 return res.json({ 
                     success: false, 
                     error: 'Credenciales incorrectas' 
