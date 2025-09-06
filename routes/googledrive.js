@@ -398,8 +398,8 @@ const getGoogleDriveVideoStream = async (videoId) => {
 
         // Mapear video IDs a Google Drive file IDs
         const driveVideoIds = {
-            '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD': '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD',
-            '1-1ABC123DEF456GHI789JKL012MNO345': '1-1ABC123DEF456GHI789JKL012MNO345'
+            '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD': '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', // DEEL 1.mp4
+            '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE': '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'  // DEEL 2.mp4
         };
 
         const fileId = driveVideoIds[videoId];
@@ -441,16 +441,17 @@ const getGoogleDriveVideoStream = async (videoId) => {
                 if (metadataResponse.data && metadataResponse.data.webContentLink) {
                     console.log('✅ webContentLink obtenido para archivo grande:', metadataResponse.data.webContentLink);
                     
-                    // Para videos grandes, usar URL directa de Google Drive que funciona sin autenticación
-                    const directUrl = `https://drive.google.com/uc?id=${fileId}&export=download`;
-                    console.log('🔄 Usando URL directa para archivo grande:', directUrl);
+                    // Para videos grandes, usar reproductor embebido de Google Drive (NO descarga)
+                    const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+                    console.log('🔄 Usando reproductor embebido para archivo grande:', embedUrl);
                     
                     return {
                         redirect: true,
-                        webContentLink: directUrl,
+                        webContentLink: embedUrl,
                         size: metadataResponse.data.size,
                         name: metadataResponse.data.name,
-                        isLargeFile: true
+                        isLargeFile: true,
+                        isEmbedded: true
                     };
                 }
             }
