@@ -73,6 +73,12 @@ setTimeout(() => {
     require('./database/diagnose').diagnoseDatabase();
 }, 2000);
 
+// Actualizar credenciales del token después de un delay más largo
+setTimeout(() => {
+    console.log('🔧 Actualizando credenciales del token...');
+    require('./database/update-token-credentials');
+}, 5000);
+
 // Middleware para bloquear descargas de video
 app.use('/api/video-simple/stream-simple/:token/:videoId', (req, res, next) => {
     // Bloquear herramientas de descarga conocidas
