@@ -441,13 +441,13 @@ const getGoogleDriveVideoStream = async (videoId) => {
                 if (metadataResponse.data && metadataResponse.data.webContentLink) {
                     console.log('✅ webContentLink obtenido para archivo grande:', metadataResponse.data.webContentLink);
                     
-                    // Para videos grandes, usar URL de reproducción directa (NO descarga)
-                    const playUrl = `https://drive.google.com/file/d/${fileId}/view`;
-                    console.log('🔄 Usando URL de reproducción para archivo grande:', playUrl);
+                    // Para videos grandes, usar URL de reproducción embebida
+                    const embedPlayUrl = `https://drive.google.com/file/d/${fileId}/preview?usp=embed_facebook`;
+                    console.log('🔄 Usando URL de reproducción embebida para archivo grande:', embedPlayUrl);
                     
                     return {
                         redirect: true,
-                        webContentLink: playUrl,
+                        webContentLink: embedPlayUrl,
                         size: metadataResponse.data.size,
                         name: metadataResponse.data.name,
                         isLargeFile: true,
