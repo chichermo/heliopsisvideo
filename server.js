@@ -26,6 +26,7 @@ app.use(helmet({
             mediaSrc: ["'self'", "https://graph.microsoft.com", "https://drive.google.com", "https://*.googleusercontent.com", "https://res.cloudinary.com"],
             imgSrc: ["'self'", "data:", "https:"],
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+            frameSrc: ["'self'", "https://drive.google.com"],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
             formAction: ["'self'"],
