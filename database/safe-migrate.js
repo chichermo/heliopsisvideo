@@ -27,8 +27,9 @@ function createSimpleTokensTable() {
             token TEXT UNIQUE NOT NULL,
             email TEXT NOT NULL,
             password TEXT,
+            video_ids TEXT NOT NULL,
             max_views INTEGER DEFAULT 999999,
-            current_views INTEGER DEFAULT 0,
+            views INTEGER DEFAULT 0,
             is_active INTEGER DEFAULT 1,
             notes TEXT,
             payment_status TEXT DEFAULT 'paid',
@@ -80,6 +81,7 @@ function insertDefaultTokens() {
             token: '0a95b5699675be71c815e8475005294f',
             email: 'usuario@ejemplo.com',
             password: 'password123',
+            video_ids: '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD,1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE',
             max_views: 999999,
             notes: 'Token permanente garantizado'
         }
@@ -87,12 +89,13 @@ function insertDefaultTokens() {
     
     defaultTokens.forEach((tokenData, index) => {
         db.run(`
-            INSERT OR IGNORE INTO simple_tokens (token, email, password, max_views, notes)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO simple_tokens (token, email, password, video_ids, max_views, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
         `, [
             tokenData.token,
             tokenData.email,
             tokenData.password,
+            tokenData.video_ids,
             tokenData.max_views,
             tokenData.notes
         ], function(err) {
@@ -112,6 +115,7 @@ function migrateExistingTable() {
     
     // Agregar columnas nuevas si no existen
     const alterQueries = [
+        'ALTER TABLE simple_tokens ADD COLUMN video_ids TEXT',
         'ALTER TABLE simple_tokens ADD COLUMN last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP',
         'ALTER TABLE simple_tokens ADD COLUMN notes TEXT',
         'ALTER TABLE simple_tokens ADD COLUMN payment_status TEXT DEFAULT "paid"'
