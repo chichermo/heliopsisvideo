@@ -758,49 +758,18 @@
             });
         }
         
-        // Función para cargar video grande abriendo nueva ventana
+        // Función para cargar video grande - redirección directa en la misma ventana
         function loadVideoWithIframe(videoUrl, videoName) {
-            console.log('🔄 Abriendo video grande en nueva ventana...');
+            console.log('🔄 Redirigiendo a video grande en la misma ventana...');
             
             // Mostrar mensaje de carga
-            showMessage(`<i class="fas fa-external-link-alt"></i> Abriendo ${videoName} en nueva ventana...`, 'info');
+            showMessage(`<i class="fas fa-video"></i> Redirigiendo a ${videoName}...`, 'info');
             
-            // Abrir nueva ventana con Google Drive
-            const newWindow = window.open(videoUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-            
-            if (newWindow) {
-                console.log('✅ Nueva ventana abierta exitosamente');
-                showMessage(`<i class="fas fa-check"></i> ${videoName} abierto en nueva ventana`, 'success');
-                
-                // Enfocar la nueva ventana
-                newWindow.focus();
-            } else {
-                console.error('❌ No se pudo abrir nueva ventana (bloqueador de popups)');
-                showError(`<i class="fas fa-exclamation-triangle"></i> No se pudo abrir nueva ventana. Por favor, permite popups para este sitio.`);
-                
-                // Fallback: mostrar enlace directo
-                const fallbackMessage = `
-                    <div style="text-align: center; padding: 20px;">
-                        <h3><i class="fas fa-video"></i> ${videoName}</h3>
-                        <p>Haz clic en el enlace para abrir el video:</p>
-                        <a href="${videoUrl}" target="_blank" style="
-                            display: inline-block;
-                            padding: 15px 30px;
-                            background: #007bff;
-                            color: white;
-                            text-decoration: none;
-                            border-radius: 8px;
-                            font-size: 18px;
-                            font-weight: bold;
-                            margin: 10px;
-                        ">
-                            <i class="fas fa-play"></i> Abrir Video
-                        </a>
-                    </div>
-                `;
-                
-                document.getElementById('videoContainer').innerHTML = fallbackMessage;
-            }
+            // Redirección directa en la misma ventana después de 2 segundos
+            setTimeout(() => {
+                console.log('✅ Redirigiendo a Google Drive');
+                window.location.href = videoUrl;
+            }, 2000);
         }
         
         // Controles de video
