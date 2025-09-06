@@ -448,7 +448,101 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                         console.log('🔄 Redirigiendo a webContentLink como fallback');
                     }
                     
-                    // Configurar headers para redirección
+                    // Para videos grandes, usar un enfoque diferente: servir una página HTML que redirija
+                    if (streamResult.isLargeFile) {
+                        console.log('📱 Sirviendo página de redirección para video grande');
+                        
+                        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Reproductor de Video</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background: #000; 
+            font-family: Arial, sans-serif; 
+        }
+        .video-container { 
+            position: relative; 
+            width: 100vw; 
+            height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .video-player { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+        }
+        .loading { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            color: white; 
+            text-align: center; 
+        }
+        .spinner { 
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #3498db; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 2s linear infinite; 
+            margin: 20px auto; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <div class="loading" id="loading">
+            <h2>🎬 Cargando video...</h2>
+            <div class="spinner"></div>
+            <p>Preparando reproductor...</p>
+        </div>
+        <iframe 
+            id="videoFrame" 
+            class="video-player" 
+            src="${streamResult.webContentLink}" 
+            frameborder="0" 
+            allowfullscreen
+            style="display: none;"
+            onload="hideLoading()">
+        </iframe>
+    </div>
+    <script>
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('videoFrame').style.display = 'block';
+        }
+        
+        // Fallback si el iframe no carga
+        setTimeout(() => {
+            if (document.getElementById('loading').style.display !== 'none') {
+                document.getElementById('loading').innerHTML = 
+                    '<h2>⚠️ Error cargando video</h2><p>Intenta recargar la página</p>';
+            }
+        }, 10000);
+    </script>
+</body>
+</html>`;
+                        
+                        res.setHeader('Content-Type', 'text/html');
+                        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+                        res.setHeader('Pragma', 'no-cache');
+                        res.setHeader('Expires', '0');
+                        return res.send(html);
+                    }
+                    
+                    // Para archivos pequeños, usar redirección directa
                     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
                     res.setHeader('Pragma', 'no-cache');
                     res.setHeader('Expires', '0');
@@ -459,7 +553,6 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                     res.setHeader('Content-Disposition', 'inline; filename=""');
                     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
                     
-                    // Para archivos grandes, usar redirección 302 temporal
                     return res.redirect(302, streamResult.webContentLink);
                 }
                 
