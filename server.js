@@ -61,17 +61,9 @@ if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
     require('./database/migrate').migrateDatabase();
 }
 
-// Ejecutar migración de tokens permanentes
-console.log('🔒 Ejecutando migración de tokens permanentes...');
-require('./database/persistent-migrate').migratePersistentTokens();
-
-// Hacer todos los tokens existentes permanentes
-console.log('🔒 Garantizando que todos los tokens sean permanentes...');
-require('./database/make-tokens-permanent');
-
-// Forzar migración de tokens reales en Render
-console.log('🚀 Forzando migración de tokens reales en Render...');
-require('./fix-render-database');
+// Ejecutar migración segura
+console.log('🔒 Ejecutando migración segura de base de datos...');
+require('./database/safe-migrate').safeMigrate();
 
 // Middleware para bloquear descargas de video
 app.use('/api/video-simple/stream-simple/:token/:videoId', (req, res, next) => {
