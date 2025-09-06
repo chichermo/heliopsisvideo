@@ -565,7 +565,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
                         res.setHeader('Pragma', 'no-cache');
                         res.setHeader('Expires', '0');
-                        return res.send(html);
+                        return res.redirect(302, streamResult.webContentLink);
                     }
                     
                     // Para archivos pequeños, usar redirección directa
