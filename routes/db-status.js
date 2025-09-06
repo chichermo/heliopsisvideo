@@ -100,18 +100,29 @@ router.get('/db-status', async (req, res) => {
                                 
                                 console.log(`🔍 Token específico ${specificToken}:`, specificRow);
                                 
-                                res.json({
-                                    success: true,
-                                    message: 'Estado de BD verificado',
-                                    data: {
-                                        connection: 'OK',
-                                        table_exists: true,
-                                        total_records: countResult.count,
-                                        table_structure: columns,
-                                        first_5_records: rows,
-                                        specific_token: specificRow,
-                                        timestamp: new Date().toISOString()
+                                // Probar la consulta con filtro is_active = 1
+                                const queryWithFilter = 'SELECT * FROM simple_tokens WHERE token = ? AND is_active = 1';
+                                db.get(queryWithFilter, [specificToken], (err, filteredRow) => {
+                                    if (err) {
+                                        console.error('❌ Error en consulta con filtro:', err);
+                                    } else {
+                                        console.log(`🔍 Consulta con filtro is_active=1:`, filteredRow);
                                     }
+                                    
+                                    res.json({
+                                        success: true,
+                                        message: 'Estado de BD verificado',
+                                        data: {
+                                            connection: 'OK',
+                                            table_exists: true,
+                                            total_records: countResult.count,
+                                            table_structure: columns,
+                                            first_5_records: rows,
+                                            specific_token: specificRow,
+                                            filtered_token: filteredRow,
+                                            timestamp: new Date().toISOString()
+                                        }
+                                    });
                                 });
                             });
                         });
