@@ -79,11 +79,11 @@ function insertDefaultTokens() {
     const defaultTokens = [
         {
             token: '0a95b5699675be71c815e8475005294f',
-            email: 'usuario@ejemplo.com',
-            password: 'password123',
+            email: 'erienpoppe@gmail.com',
+            password: 'kxg8AsFg',
             video_ids: '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD,1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE',
             max_views: 999999,
-            notes: 'Token permanente garantizado'
+            notes: 'Token real recuperado - Acceso permanente garantizado'
         }
     ];
     
@@ -139,6 +139,45 @@ function migrateExistingTable() {
         } else {
             console.log('✅ Límite de vistas actualizado para tokens permanentes');
         }
+    });
+    
+    // Actualizar credenciales del token específico
+    updateTokenCredentials();
+}
+
+function updateTokenCredentials() {
+    console.log('🔧 Actualizando credenciales del token específico...');
+    
+    const updateQuery = `
+        UPDATE simple_tokens 
+        SET email = ?, password = ?, notes = ?
+        WHERE token = ?
+    `;
+    
+    const token = '0a95b5699675be71c815e8475005294f';
+    const email = 'erienpoppe@gmail.com';
+    const password = 'kxg8AsFg';
+    const notes = 'Token real recuperado - Acceso permanente garantizado';
+    
+    db.run(updateQuery, [email, password, notes, token], function(err) {
+        if (err) {
+            console.error('❌ Error actualizando credenciales:', err);
+            return;
+        }
+        
+        console.log(`✅ Credenciales actualizadas: ${this.changes} filas afectadas`);
+        
+        // Verificar la actualización
+        db.get('SELECT * FROM simple_tokens WHERE token = ?', [token], (err, row) => {
+            if (err) {
+                console.error('❌ Error verificando actualización:', err);
+                return;
+            }
+            
+            if (row) {
+                console.log(`✅ Token verificado: ${row.email} | ${row.password}`);
+            }
+        });
     });
 }
 
