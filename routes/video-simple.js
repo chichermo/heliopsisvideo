@@ -225,18 +225,23 @@ router.get('/check-simple/:token', async (req, res) => {
     try {
         const { token } = req.params;
         
+        console.log(`🔍 Verificando token simple: ${token}`);
+        
         const query = 'SELECT * FROM simple_tokens WHERE token = ? AND is_active = 1';
         
         db.get(query, [token], (err, row) => {
             if (err) {
-                console.error('Error verificando token:', err);
+                console.error('❌ Error verificando token:', err);
                 return res.status(500).json({ 
                     success: false, 
                     error: 'Error verificando token' 
                 });
             }
             
+            console.log(`📋 Resultado de consulta:`, row);
+            
             if (!row) {
+                console.log(`❌ Token ${token} no encontrado o inactivo`);
                 return res.json({ 
                     success: false, 
                     error: 'Token no encontrado o inactivo' 

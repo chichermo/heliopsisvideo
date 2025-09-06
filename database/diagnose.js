@@ -1,106 +1,93 @@
-const sqlite3 = require('sqlite3').verbose();
-
-console.log('🔍 Iniciando diagnóstico de base de datos...\n');
-
-// Conectar a la base de datos
-const db = new sqlite3.Database('./database/access_tokens.db', (err) => {
-    if (err) {
-        console.error('❌ Error conectando a la base de datos:', err.message);
-        process.exit(1);
-    }
-    console.log('✅ Base de datos SQLite conectada');
-    
-    // Ejecutar diagnóstico paso a paso
-    diagnoseDatabase();
-});
+const { db } = require('./init');
 
 function diagnoseDatabase() {
-    console.log('📋 PASO 1: Verificando estructura de tablas...\n');
+    console.log('🔍 Diagnóstico de base de datos...');
     
-    // Verificar estructura de allowed_videos
-    db.all("PRAGMA table_info(allowed_videos)", [], (err, columns) => {
+    // Verificar si la tabla existe
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='simple_tokens'", [], (err, table) => {
         if (err) {
-            console.error('❌ Error obteniendo estructura de allowed_videos:', err);
+            console.error('❌ Error verificando tabla:', err);
             return;
         }
         
-        console.log('📋 Estructura de tabla allowed_videos:');
-        columns.forEach(col => {
-            console.log(`  - ${col.name}: ${col.type} (${col.notnull ? 'NOT NULL' : 'NULL'})`);
-        });
+        if (!table) {
+            console.log('❌ Tabla simple_tokens NO existe');
+            return;
+        }
         
-        // Verificar datos actuales
-        console.log('\n📋 PASO 2: Verificando datos actuales...');
-        db.all("SELECT * FROM allowed_videos", [], (err, videos) => {
+        console.log('✅ Tabla simple_tokens existe');
+        
+        // Verificar estructura de la tabla
+        db.all("PRAGMA table_info(simple_tokens)", [], (err, columns) => {
             if (err) {
-                console.error('❌ Error obteniendo videos:', err);
+                console.error('❌ Error obteniendo estructura:', err);
                 return;
             }
             
-            console.log(`📊 Total de videos encontrados: ${videos.length}`);
-            
-            if (videos.length === 0) {
-                console.log('⚠️ No hay videos en la tabla');
-                return;
-            }
-            
-            console.log('\n📝 Datos de cada video:');
-            videos.forEach((video, index) => {
-                console.log(`\n🎬 Video ${index + 1}:`);
-                console.log(`  ID: ${video.id}`);
-                console.log(`  video_id: ${video.video_id}`);
-                console.log(`  title: ${video.title}`);
-                console.log(`  description: ${video.description}`);
-                console.log(`  file_size: ${video.file_size}`);
-                console.log(`  duration: ${video.duration}`);
-                console.log(`  notes: ${video.notes}`);
-                console.log(`  is_active: ${video.is_active}`);
-                console.log(`  created_at: ${video.created_at}`);
+            console.log('📋 Estructura de la tabla:');
+            columns.forEach(col => {
+                console.log(`  - ${col.name}: ${col.type} ${col.notnull ? 'NOT NULL' : ''}`);
             });
             
-            // Verificar si hay datos corruptos
-            console.log('\n📋 PASO 3: Analizando integridad de datos...');
-            const corruptedVideos = videos.filter(video => 
-                !video.title || 
-                video.title === 'undefined' || 
-                !video.video_id || 
-                video.video_id === 'undefined'
-            );
-            
-            if (corruptedVideos.length > 0) {
-                console.log(`⚠️ Encontrados ${corruptedVideos.length} videos con datos corruptos:`);
-                corruptedVideos.forEach((video, index) => {
-                    console.log(`  Video ${index + 1}: ID=${video.id}, title="${video.title}", video_id="${video.video_id}"`);
-                });
-                
-                console.log('\n🔧 RECOMENDACIÓN: Ejecutar corrección de datos...');
-                console.log('   node database/final-fix.js');
-            } else {
-                console.log('✅ Todos los videos tienen datos válidos');
-            }
-            
-            // Verificar otras tablas
-            console.log('\n📋 PASO 4: Verificando otras tablas...');
-            db.all("SELECT name FROM sqlite_master WHERE type='table'", [], (err, tables) => {
+            // Verificar si hay datos
+            db.get("SELECT COUNT(*) as count FROM simple_tokens", [], (err, result) => {
                 if (err) {
-                    console.error('❌ Error obteniendo lista de tablas:', err);
-                } else {
-                    console.log('📋 Tablas en la base de datos:');
-                    tables.forEach(table => {
-                        console.log(`  - ${table.name}`);
-                    });
+                    console.error('❌ Error contando registros:', err);
+                    return;
                 }
                 
-                // Cerrar conexión
-                db.close((err) => {
-                    if (err) {
-                        console.error('❌ Error cerrando base de datos:', err);
-                    } else {
-                        console.log('\n✅ Base de datos cerrada');
-                        console.log('\n🎯 DIAGNÓSTICO COMPLETADO');
-                    }
-                });
+                console.log(`📊 Total de registros: ${result.count}`);
+                
+                if (result.count > 0) {
+                    // Mostrar todos los tokens
+                    db.all("SELECT token, email, video_ids, max_views, is_active FROM simple_tokens", [], (err, rows) => {
+                        if (err) {
+                            console.error('❌ Error obteniendo tokens:', err);
+                            return;
+                        }
+                        
+                        console.log('🔑 Tokens en la base de datos:');
+                        rows.forEach((row, index) => {
+                            console.log(`  ${index + 1}. Token: ${row.token}`);
+                            console.log(`     Email: ${row.email}`);
+                            console.log(`     Video IDs: ${row.video_ids || 'NULL'}`);
+                            console.log(`     Max Views: ${row.max_views}`);
+                            console.log(`     Active: ${row.is_active}`);
+                            console.log('');
+                        });
+                        
+                        // Verificar token específico
+                        const testToken = '0a95b5699675be71c815e8475005294f';
+                        db.get("SELECT * FROM simple_tokens WHERE token = ?", [testToken], (err, row) => {
+                            if (err) {
+                                console.error('❌ Error verificando token específico:', err);
+                                return;
+                            }
+                            
+                            if (row) {
+                                console.log(`✅ Token ${testToken} encontrado:`);
+                                console.log(`   Email: ${row.email}`);
+                                console.log(`   Video IDs: ${row.video_ids}`);
+                                console.log(`   Max Views: ${row.max_views}`);
+                                console.log(`   Active: ${row.is_active}`);
+                            } else {
+                                console.log(`❌ Token ${testToken} NO encontrado`);
+                            }
+                        });
+                    });
+                } else {
+                    console.log('⚠️ No hay registros en la tabla');
+                }
             });
         });
     });
+}
+
+module.exports = {
+    diagnoseDatabase
+};
+
+// Ejecutar si se llama directamente
+if (require.main === module) {
+    diagnoseDatabase();
 }

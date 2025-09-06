@@ -65,6 +65,12 @@ if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
 console.log('🔒 Ejecutando migración segura de base de datos...');
 require('./database/safe-migrate').safeMigrate();
 
+// Ejecutar diagnóstico después de un breve delay
+setTimeout(() => {
+    console.log('🔍 Ejecutando diagnóstico de base de datos...');
+    require('./database/diagnose').diagnoseDatabase();
+}, 2000);
+
 // Middleware para bloquear descargas de video
 app.use('/api/video-simple/stream-simple/:token/:videoId', (req, res, next) => {
     // Bloquear herramientas de descarga conocidas
