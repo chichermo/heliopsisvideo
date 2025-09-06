@@ -72,6 +72,8 @@ router.get('/test-token/:token', async (req, res) => {
                     max_views: row.max_views,
                     views: row.views,
                     is_active: row.is_active,
+                    is_active_type: typeof row.is_active,
+                    is_active_strict: row.is_active === 1,
                     created_at: row.created_at
                 });
                 
@@ -86,6 +88,16 @@ router.get('/test-token/:token', async (req, res) => {
                 }
                 
                 console.log(`✅ Token ${token} VÁLIDO y ACTIVO`);
+                
+                // Probar la consulta con filtro is_active = 1
+                const queryWithFilter = 'SELECT * FROM simple_tokens WHERE token = ? AND is_active = 1';
+                db.get(queryWithFilter, [token], (err, filteredRow) => {
+                    if (err) {
+                        console.error('❌ Error en consulta con filtro:', err);
+                    } else {
+                        console.log(`🔍 Consulta con filtro is_active=1:`, filteredRow);
+                    }
+                });
                 
                 res.json({
                     success: true,
