@@ -977,60 +977,31 @@
         function createVideoSelector() {
             videoSelector.innerHTML = '';
             
-            // Get video names from Google Drive
-            fetch('/api/googledrive/files')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.data) {
-                        const videoMap = {};
-                        data.data.forEach(video => {
-                            videoMap[video.id] = video.name;
-                        });
-                        
-                        videoIds.forEach((videoId, index) => {
-                            const videoName = videoMap[videoId] || `Video ${index + 1}`;
-                            
-                            const tab = document.createElement('button');
-                            tab.className = 'video-tab';
-                            tab.textContent = videoName;
-                            tab.onclick = () => switchVideo(index);
-                            
-                            if (index === 0) {
-                                tab.classList.add('active');
-                            }
-                            
-                            videoSelector.appendChild(tab);
-                        });
-                        
-                        // Load first video
-                        if (videoIds.length > 0) {
-                            loadVideo(videoIds[0], 0);
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading video names:', error);
-                    // Fallback with generic names
-                    videoIds.forEach((videoId, index) => {
-                        const videoName = `Video ${index + 1}`;
-                        
-                        const tab = document.createElement('button');
-                        tab.className = 'video-tab';
-                        tab.textContent = videoName;
-                        tab.onclick = () => switchVideo(index);
-                        
-                        if (index === 0) {
-                            tab.classList.add('active');
-                        }
-                        
-                        videoSelector.appendChild(tab);
-                    });
-                    
-                    // Load first video
-                    if (videoIds.length > 0) {
-                        loadVideo(videoIds[0], 0);
-                    }
-                });
+            // Mapeo de video IDs a nombres
+            const videoNames = {
+                '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD': 'DEEL 1',
+                '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE': 'DEEL 2'
+            };
+            
+            videoIds.forEach((videoId, index) => {
+                const videoName = videoNames[videoId] || `Video ${index + 1}`;
+                
+                const tab = document.createElement('button');
+                tab.className = 'video-tab';
+                tab.textContent = videoName;
+                tab.onclick = () => switchVideo(index);
+                
+                if (index === 0) {
+                    tab.classList.add('active');
+                }
+                
+                videoSelector.appendChild(tab);
+            });
+            
+            // Load first video
+            if (videoIds.length > 0) {
+                loadVideo(videoIds[0], videoNames[videoIds[0]] || 'Video 1');
+            }
         }
         
         // Switch video
@@ -1520,12 +1491,16 @@
             // Control de Play/Pause
             playPauseBtn.addEventListener('click', () => {
                 if (isPlaying) {
-                    sendVimeoCommand('pause');
+                    iframe.contentWindow.postMessage({
+                        method: 'pause'
+                    }, 'https://player.vimeo.com');
                     playIcon.className = 'fas fa-play';
                     playText.textContent = 'Play';
                     isPlaying = false;
                 } else {
-                    sendVimeoCommand('play');
+                    iframe.contentWindow.postMessage({
+                        method: 'play'
+                    }, 'https://player.vimeo.com');
                     playIcon.className = 'fas fa-pause';
                     playText.textContent = 'Pause';
                     isPlaying = true;
@@ -1577,7 +1552,13 @@
                 const percentage = clickX / rect.width;
                 const newTime = percentage * duration;
                 
-                sendVimeoCommand('setCurrentTime', newTime);
+                // Usar la API de Vimeo correctamente
+                if (iframe.contentWindow && iframe.contentWindow.postMessage) {
+                    iframe.contentWindow.postMessage({
+                        method: 'setCurrentTime',
+                        value: newTime
+                    }, 'https://player.vimeo.com');
+                }
             });
             
             // Simular actualización de tiempo (ya que no podemos acceder directamente al iframe)
