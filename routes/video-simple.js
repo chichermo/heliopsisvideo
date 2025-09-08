@@ -1126,4 +1126,53 @@ router.post('/insert-token-direct', async (req, res) => {
     }
 });
 
+// Ruta para verificar tokens de emergencia
+router.get('/emergency-token/:token', (req, res) => {
+    const { token } = req.params;
+    
+    // Tokens de emergencia hardcodeados
+    const emergencyTokens = {
+        '3e736c6f6eb01c7942fe52e841495877': {
+            email: 'johnnycoppejans@hotmail.com',
+            password: '7WbovVpD',
+            video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
+            views: 0,
+            max_views: 999999,
+            is_permanent: true,
+            requires_password: true,
+            status: 'permanente'
+        },
+        '2186025af95ed07d769ac7a493e469a7': {
+            email: 'johnnycoppejans@hotmail.com',
+            password: '7WbovVpD',
+            video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
+            views: 0,
+            max_views: 999999,
+            is_permanent: true,
+            requires_password: true,
+            status: 'permanente'
+        }
+    };
+    
+    if (emergencyTokens[token]) {
+        res.json({
+            success: true,
+            data: {
+                token,
+                email: emergencyTokens[token].email,
+                video_ids: emergencyTokens[token].video_ids,
+                max_views: emergencyTokens[token].max_views,
+                is_permanent: emergencyTokens[token].is_permanent,
+                requires_password: emergencyTokens[token].requires_password,
+                status: emergencyTokens[token].status
+            }
+        });
+    } else {
+        res.status(404).json({
+            success: false,
+            error: 'Token de emergencia no encontrado'
+        });
+    }
+});
+
 module.exports = router;
