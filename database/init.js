@@ -79,4 +79,4 @@ function initDatabase() {
     console.log('✅ Tablas de base de datos creadas');
 }
 
-module.exports = { db };
+module.exports = { db, initDatabase };

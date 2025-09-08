@@ -7,9 +7,10 @@ require('dotenv').config();
 
 const { initDatabase } = require('./database/init');
 const { googledriveRoutes } = require('./routes/googledrive');
-const { accessRoutes } = require('./routes/access');
-const { videoRoutes } = require('./routes/video');
-const { videoManagementRoutes } = require('./routes/videos');
+const accessRoutes = require('./routes/access');
+const videoRoutes = require('./routes/video');
+const videoManagementRoutes = require('./routes/videos');
+const videoSimpleRoutes = require('./routes/video-simple');
 const { router: vimeoRoutes } = require('./routes/vimeo');
 
 const app = express();
@@ -20,12 +21,19 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
             scriptSrc: ["'self'", "'unsafe-inline'"],
             scriptSrcAttr: ["'unsafe-inline'"],
-            mediaSrc: ["'self'", "https://graph.microsoft.com"],
-            imgSrc: ["'self'", "data:", "https:"],
+            mediaSrc: ["'self'", "https://graph.microsoft.com", "https://drive.google.com", "https://*.googleusercontent.com", "https://res.cloudinary.com", "https://mega.nz", "https://*.mega.nz", "https://player.vimeo.com", "https://*.vimeo.com"],
+            imgSrc: ["'self'", "data:", "https:", "blob:"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+            frameSrc: ["'self'", "https://drive.google.com", "https://*.drive.google.com", "https://drive.usercontent.google.com", "https://mega.nz", "https://*.mega.nz", "https://player.vimeo.com", "https://*.vimeo.com"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            frameAncestors: ["'self'", "https://drive.google.com", "https://*.drive.google.com", "https://mega.nz", "https://*.mega.nz", "https://player.vimeo.com", "https://*.vimeo.com"]
         },
+        upgradeInsecureRequests: true
     },
 }));
 
@@ -50,6 +58,7 @@ app.use('/api/googledrive', googledriveRoutes);
 app.use('/api/access', accessRoutes);
 app.use('/api/video', videoRoutes);
 app.use('/api/videos', videoManagementRoutes);
+app.use('/api/video-simple', videoSimpleRoutes);
 app.use('/api/vimeo', vimeoRoutes);
 
 // Ruta principal para el panel de administración
