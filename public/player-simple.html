@@ -949,24 +949,24 @@
                 '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD': 'DEEL 1',
                 '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE': 'DEEL 2'
             };
-                        
-                        videoIds.forEach((videoId, index) => {
+            
+            videoIds.forEach((videoId, index) => {
                 const videoName = videoNames[videoId] || `Video ${index + 1}`;
-                            
-                            const tab = document.createElement('button');
-                            tab.className = 'video-tab';
-                            tab.textContent = videoName;
-                            tab.onclick = () => switchVideo(index);
-                            
-                            if (index === 0) {
-                                tab.classList.add('active');
-                            }
-                            
-                            videoSelector.appendChild(tab);
-                        });
-                        
-                        // Load first video
-                        if (videoIds.length > 0) {
+                
+                const tab = document.createElement('button');
+                tab.className = 'video-tab';
+                tab.textContent = videoName;
+                tab.onclick = () => switchVideo(index);
+                
+                if (index === 0) {
+                    tab.classList.add('active');
+                }
+                
+                videoSelector.appendChild(tab);
+            });
+            
+            // Load first video
+            if (videoIds.length > 0) {
                 loadVideo(videoIds[0], videoNames[videoIds[0]] || 'Video 1');
             }
         }
@@ -1460,7 +1460,17 @@
                     if (value !== null) {
                         message.value = value;
                     }
-                    iframe.contentWindow.postMessage(message, 'https://player.vimeo.com');
+                    // Usar '*' como origen para evitar errores de CORS
+                    iframe.contentWindow.postMessage(message, '*');
+                    
+                    // También intentar con el origen específico de Vimeo
+                    setTimeout(() => {
+                        try {
+                            iframe.contentWindow.postMessage(message, 'https://player.vimeo.com');
+                        } catch (e) {
+                            console.log('⚠️ Fallback postMessage también falló');
+                        }
+                    }, 100);
                 } catch (error) {
                     console.log('⚠️ No se puede comunicar con el iframe de Vimeo:', error);
                 }

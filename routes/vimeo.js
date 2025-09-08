@@ -48,7 +48,7 @@ const getVimeoVideoStream = async (videoId) => {
         console.log(`🎥 Usando embedding de Vimeo con ID: ${vimeoId}`);
 
         // Generar código de embedding de Vimeo completamente limpio con aspect ratio correcto
-        const embedCode = `<div style="position:relative;width:100%;height:100%;overflow:hidden;"><iframe src="https://player.vimeo.com/video/${vimeoId}?badge=0&autopause=0&player_id=0&app_id=58479&title=0&byline=0&portrait=0&color=ffffff&background=1&transparent=0&autoplay=1&muted=0" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" title="Video"></iframe></div>`;
+        const embedCode = `<div style="position:relative;width:100%;height:100%;overflow:hidden;"><iframe src="https://player.vimeo.com/video/${vimeoId}?badge=0&autopause=0&player_id=0&app_id=58479&title=0&byline=0&portrait=0&color=ffffff&background=1&transparent=0&autoplay=1&muted=0&controls=0&loop=0&muted=0&autoplay=1&quality=auto&responsive=1" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" title="Video"></iframe></div>`;
 
         console.log('✅ Código de embedding de Vimeo generado exitosamente');
 
