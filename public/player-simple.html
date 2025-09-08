@@ -587,26 +587,6 @@
 </head>
 <body>
     <!-- Popup de Mantenimiento en Holandés -->
-    <div id="maintenancePopup" class="maintenance-popup">
-        <div class="maintenance-content">
-            <img src="/logo.png" alt="Heliopsis Logo" class="maintenance-logo">
-            <div class="maintenance-icon">
-                <i class="fas fa-tools"></i>
-            </div>
-            <div class="maintenance-title">
-                Onderhoud in Uitvoering
-            </div>
-            <div class="maintenance-message">
-                Wij werken momenteel aan het oplossen van streamingproblemen vanwege de hoge vraag naar video's. We streven ernaar om dit zo snel mogelijk permanent op te lossen.
-                <br><br>
-                <strong>Bedankt voor uw geduld!</strong>
-            </div>
-            <div class="maintenance-spinner"></div>
-            <button class="maintenance-button" onclick="hideMaintenancePopup()">
-                <i class="fas fa-check"></i> Begrijpen
-            </button>
-        </div>
-    </div>
 
     <div class="container">
         <div class="header">
@@ -710,24 +690,11 @@
         const videoSelector = document.getElementById('videoSelector');
         const messageContainer = document.getElementById('messageContainer');
         
-        // Función para ocultar el popup de mantenimiento
-        function hideMaintenancePopup() {
-            const popup = document.getElementById('maintenancePopup');
-            if (popup) {
-                popup.style.opacity = '0';
-                popup.style.transition = 'opacity 0.5s ease';
-                setTimeout(() => {
-                    popup.style.display = 'none';
-                }, 500);
-            }
-        }
         
         // Inicializar
         document.addEventListener('DOMContentLoaded', () => {
-            // Mostrar popup de mantenimiento por 8 segundos (más tiempo para leer)
-            setTimeout(() => {
-                hideMaintenancePopup();
-            }, 8000);
+            // Inicialización sin popup de mantenimiento
+            console.log('🎬 Sistema inicializado');
             
             checkAccess();
             setupKeyboardShortcuts();
@@ -982,24 +949,24 @@
                 '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD': 'DEEL 1',
                 '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE': 'DEEL 2'
             };
-            
-            videoIds.forEach((videoId, index) => {
+                        
+                        videoIds.forEach((videoId, index) => {
                 const videoName = videoNames[videoId] || `Video ${index + 1}`;
-                
-                const tab = document.createElement('button');
-                tab.className = 'video-tab';
-                tab.textContent = videoName;
-                tab.onclick = () => switchVideo(index);
-                
-                if (index === 0) {
-                    tab.classList.add('active');
-                }
-                
-                videoSelector.appendChild(tab);
-            });
-            
-            // Load first video
-            if (videoIds.length > 0) {
+                            
+                            const tab = document.createElement('button');
+                            tab.className = 'video-tab';
+                            tab.textContent = videoName;
+                            tab.onclick = () => switchVideo(index);
+                            
+                            if (index === 0) {
+                                tab.classList.add('active');
+                            }
+                            
+                            videoSelector.appendChild(tab);
+                        });
+                        
+                        // Load first video
+                        if (videoIds.length > 0) {
                 loadVideo(videoIds[0], videoNames[videoIds[0]] || 'Video 1');
             }
         }
@@ -1013,8 +980,16 @@
                 tab.classList.toggle('active', i === index);
             });
             
-            // Cargar video
-            loadVideo(videoIds[index], index);
+            // Mapeo de video IDs a nombres
+            const videoNames = {
+                '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD': 'DEEL 1',
+                '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE': 'DEEL 2'
+            };
+            
+            // Cargar video con el nombre correcto
+            const videoId = videoIds[index];
+            const videoName = videoNames[videoId] || `Video ${index + 1}`;
+            loadVideo(videoId, videoName);
         }
         
         // Load specific video
@@ -1476,13 +1451,16 @@
             let duration = 0;
             let volume = 100;
             
-            // Función para enviar comandos al iframe de Vimeo
+            // Función para enviar comandos al iframe de Vimeo usando la API correcta
             function sendVimeoCommand(command, value = null) {
                 try {
-                    iframe.contentWindow.postMessage({
-                        method: command,
-                        value: value
-                    }, '*');
+                    const message = {
+                        method: command
+                    };
+                    if (value !== null) {
+                        message.value = value;
+                    }
+                    iframe.contentWindow.postMessage(message, 'https://player.vimeo.com');
                 } catch (error) {
                     console.log('⚠️ No se puede comunicar con el iframe de Vimeo:', error);
                 }
@@ -1491,16 +1469,12 @@
             // Control de Play/Pause
             playPauseBtn.addEventListener('click', () => {
                 if (isPlaying) {
-                    iframe.contentWindow.postMessage({
-                        method: 'pause'
-                    }, 'https://player.vimeo.com');
+                    sendVimeoCommand('pause');
                     playIcon.className = 'fas fa-play';
                     playText.textContent = 'Play';
                     isPlaying = false;
                 } else {
-                    iframe.contentWindow.postMessage({
-                        method: 'play'
-                    }, 'https://player.vimeo.com');
+                    sendVimeoCommand('play');
                     playIcon.className = 'fas fa-pause';
                     playText.textContent = 'Pause';
                     isPlaying = true;
@@ -1552,13 +1526,7 @@
                 const percentage = clickX / rect.width;
                 const newTime = percentage * duration;
                 
-                // Usar la API de Vimeo correctamente
-                if (iframe.contentWindow && iframe.contentWindow.postMessage) {
-                    iframe.contentWindow.postMessage({
-                        method: 'setCurrentTime',
-                        value: newTime
-                    }, 'https://player.vimeo.com');
-                }
+                sendVimeoCommand('setCurrentTime', newTime);
             });
             
             // Simular actualización de tiempo (ya que no podemos acceder directamente al iframe)
