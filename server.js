@@ -71,6 +71,11 @@ app.get('/watch/:token', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'player.html'));
 });
 
+// Ruta para ver videos con token simple
+app.get('/watch-simple/:token', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'player-simple.html'));
+});
+
 // Ruta de inicio
 app.get('/', (req, res) => {
     res.json({
