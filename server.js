@@ -5,11 +5,12 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
-const { initDatabase } = require('./database/database');
+const { initDatabase } = require('./database/init');
 const { googledriveRoutes } = require('./routes/googledrive');
 const { accessRoutes } = require('./routes/access');
 const { videoRoutes } = require('./routes/video');
 const { videoManagementRoutes } = require('./routes/videos');
+const { router: vimeoRoutes } = require('./routes/vimeo');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,6 +50,7 @@ app.use('/api/googledrive', googledriveRoutes);
 app.use('/api/access', accessRoutes);
 app.use('/api/video', videoRoutes);
 app.use('/api/videos', videoManagementRoutes);
+app.use('/api/vimeo', vimeoRoutes);
 
 // Ruta principal para el panel de administración
 app.get('/admin', (req, res) => {
