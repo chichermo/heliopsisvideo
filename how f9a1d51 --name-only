@@ -1,0 +1,10 @@
+[33m9d4762e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m  Fix: Compatibilidad con formato de respuesta de getGoogleDriveVideoStream
+[33mf77a595[m  Streaming optimizado - Solución definitiva sin CORS
+[33m26c5bbd[m  Solución definitiva - Streaming directo a Google Drive
+[33md7828f6[m  Arreglar streaming - Desactivar CSP y agregar logs de debug
+[33mf9a1d51[m  Simplificar streaming - Volver a configuración básica que funcionaba
+[33m814cc3a[m  Revertir a streaming protegido - Eliminar descarga y arreglar QUIC
+[33mf9a15f6[m Fix: Evitar cache y forzar actualización de frontend
+[33m4957f13[m Fix: Solución definitiva - Descarga directa desde Google Drive
+[33m60c1ba6[m Fix: Proxy streaming para evitar CORS con Google Drive
+[33mda50031[m Fix: Content Security Policy para Google Drive

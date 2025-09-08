@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Control de Acceso a Videos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 2px solid #e9ecef;
+            position: relative;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 18px 20px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            color: #6c757d;
+        }
+
+        .nav-tab.active {
+            background: white;
+            border-bottom: 4px solid #667eea;
+            color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            position: relative;
+        }
+        
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #667eea;
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: #e9ecef;
+            color: #495057;
+            transform: translateY(-1px);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .form-help {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: #6c757d;
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .form-checkbox {
+            width: 18px;
+            height: 18px;
+            accent-color: #667eea;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper span {
+            font-size: 14px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4c93 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #5a6268 0%, #343a40 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.6);
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.4);
+        }
+
+        .btn-info:hover {
+            background: linear-gradient(135deg, #138496 0%, #1ea085 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(23, 162, 184, 0.6);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #212529;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #e0a800 0%, #e8590c 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.6);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c82333 0%, #c0392b 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.6);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.6);
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .card:hover::before {
+            opacity: 1;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+        }
+
+        .card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-connected {
+            background: #28a745;
+        }
+
+        .status-disconnected {
+            background: #dc3545;
+        }
+
+        .token-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .token-item {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
+        }
+        
+        .token-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-left-color: #764ba2;
+        }
+
+        .token-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .token-token {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .token-url {
+            color: #667eea;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .token-url:hover {
+            text-decoration: underline;
+        }
+
+        .token-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            border-left: 6px solid;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .alert::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            opacity: 0.5;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 35px 25px;
+            border-radius: 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: rotate(45deg);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover::before {
+            transform: rotate(45deg) scale(1.2);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 25px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+            }
+            
+            .nav-tab {
+                border-bottom: 1px solid #dee2e6;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+        }
+        
+        /* Estilos adicionales para mejor UX */
+        .token-token {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border: 1px solid #ced4da;
+        }
+        
+        .alert {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a6fd8, #6a4c93);
+        }
+        
+        /* Efectos de hover mejorados para elementos interactivos */
+        .token-url:hover {
+            text-decoration: none;
+            color: #764ba2;
+            transform: translateX(5px);
+            transition: all 0.3s ease;
+        }
+        
+        /* Animación de carga mejorada */
+        .loading {
+            text-align: center;
+            padding: 60px 40px;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        .loading p {
+            margin-top: 20px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Control de Acceso a Videos</h1>
+            <p>Gestiona el acceso a tus videos con OneDrive de forma segura y profesional</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
+            <button class="nav-tab" onclick="showTab('tokens')">🔑 Generar Tokens</button>
+            <button class="nav-tab" onclick="showTab('manage')">⚙️ Gestionar Tokens</button>
+                         <button class="nav-tab" onclick="showTab('onedrive')">☁️ Google Drive</button>
+            <button class="nav-tab" onclick="showTab('videos')">🎬 Gestionar Videos</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalTokens">-</div>
+                    <div class="stat-label">Total de Tokens</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="usedTokens">-</div>
+                    <div class="stat-label">Tokens Usados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="expiredTokens">-</div>
+                    <div class="stat-label">Tokens Expirados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalViews">-</div>
+                    <div class="stat-label">Total de Vistas</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📈 Estadísticas Rápidas</h3>
+                <div id="dashboardStats" class="loading">
+                    <div class="spinner"></div>
+                    <p>Cargando estadísticas...</p>
+                </div>
+            </div>
+
+                         <div class="card">
+                                     <h3>🔗 Estado de Google Drive</h3>
+                 <div id="onedriveStatus" class="loading">
+                     <div class="spinner"></div>
+                     <p>Verificando conexión...</p>
+                 </div>
+             </div>
+        </div>
+
+                <!-- Generate Tokens Tab -->
+        <div id="tokens" class="tab-content">
+            <div class="card">
+                <h3>🔑 Generar Nuevo Token de Acceso Seguro</h3>
+                <form id="tokenForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">📧 Email del Usuario *</label>
+                            <input type="email" class="form-input" id="email" placeholder="usuario@ejemplo.com" required>
+                            <small class="form-help">Email obligatorio para control de acceso</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🎬 ID del Video en Google Drive *</label>
+                            <input type="text" class="form-input" id="videoId" placeholder="ID del archivo" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">⏰ Tiempo de Expiración (horas)</label>
+                            <input type="number" class="form-input" id="expiresIn" placeholder="24" value="24" min="1" max="720">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">👁️ Máximo de Vistas</label>
+                            <input type="number" class="form-input" id="maxViews" placeholder="1" value="1" min="1" max="100">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">📱 Máximo de Dispositivos</label>
+                            <input type="number" class="form-input" id="maxDevices" placeholder="1" value="1" min="1" max="5">
+                            <small class="form-help">Límite de dispositivos diferentes</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🚫 Bloquear Compartir</label>
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" class="form-checkbox" id="shareBlocked" checked>
+                                <span>Evitar que el token se comparta</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📝 Notas (opcional)</label>
+                        <input type="text" class="form-input" id="notes" placeholder="Para quién es este link...">
+                    </div>
+                    <button type="submit" class="btn btn-primary">✨ Generar Token Seguro</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>📦 Generar Múltiples Tokens</h3>
+                <form id="bulkTokenForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">📊 Cantidad de Tokens</label>
+                            <input type="number" class="form-input" id="bulkCount" placeholder="5" value="5" min="1" max="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🎬 ID del Video en Google Drive</label>
+                            <input type="text" class="form-input" id="bulkVideoId" placeholder="ID del archivo" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">⏰ Tiempo de Expiración (horas)</label>
+                            <input type="number" class="form-input" id="bulkExpiresIn" placeholder="24" value="24" min="1" max="720">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">👁️ Máximo de Vistas por Token</label>
+                            <input type="number" class="form-input" id="bulkMaxViews" placeholder="1" value="1" min="1" max="100">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">📱 Máximo de Dispositivos</label>
+                            <input type="number" class="form-input" id="bulkMaxDevices" placeholder="1" value="1" min="1" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">🚫 Bloquear Compartir</label>
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" class="form-checkbox" id="bulkShareBlocked" checked>
+                                <span>Evitar que los tokens se compartan</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📝 Notas Base</label>
+                            <input type="text" class="form-input" id="bulkNotes" placeholder="Evento, curso, etc...">
+                    </div>
+                    <button type="submit" class="btn btn-success">📦 Generar Múltiples Tokens</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Manage Tokens Tab -->
+        <div id="manage" class="tab-content">
+            <div class="card">
+                <h3>📋 Tokens Generados</h3>
+                <div id="tokenList" class="loading">
+                    <div class="spinner"></div>
+                    <p>Cargando tokens...</p>
+                </div>
+            </div>
+        </div>
+
+                 <!-- OneDrive Tab -->
+         <div id="onedrive" class="tab-content">
+            <div class="card">
+                <h3>☁️ Estado de Conexión</h3>
+                                 <div id="onedriveConnection" class="loading">
+                     <div class="spinner"></div>
+                     <p>Verificando conexión...</p>
+                 </div>
+            </div>
+
+                         <div class="card">
+                                     <h3>📁 Archivos en Google Drive</h3>
+                 <div class="form-group">
+                     <label class="form-label">Buscar archivos</label>
+                     <div style="display: flex; gap: 10px;">
+                         <input type="text" class="form-input" id="searchQuery" placeholder="Nombre del archivo...">
+                         <button onclick="searchFiles()" class="btn btn-secondary">🔍 Buscar</button>
+                     </div>
+                 </div>
+                 <div id="onedriveFiles" class="loading">
+                     <div class="spinner"></div>
+                     <p>Cargando archivos...</p>
+                 </div>
+             </div>
+
+                         <div class="card">
+                                     <h3>🔐 Configuración de Google Drive</h3>
+                    <p>Para conectar con Google Drive, necesitas:</p>
+                                   <ol style="margin: 20px 0; padding-left: 20px;">
+                      <li>Crear una aplicación en <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+                      <li>Configurar las variables de entorno en tu archivo <code>.env</code></li>
+                      <li>Obtener un token de acceso usando la autorización OAuth2</li>
+                  </ol>
+                                   <button onclick="getAuthUrl()" class="btn btn-primary">🔐 Autorizar Google Drive</button>
+             </div>
+        </div>
+
+        <!-- Gestionar Videos Tab -->
+        <div id="videos" class="tab-content">
+            <div class="card">
+                <h3>🎬 Videos Permitidos en la Aplicación</h3>
+                                 <p>Aquí puedes gestionar qué videos de Google Drive están disponibles para generar tokens:</p>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="toggleVideosView()" class="btn btn-secondary" id="toggleVideosBtn">👁️ Mostrar Videos Ocultos</button>
+                    <button onclick="showVideoStats()" class="btn btn-info">📊 Estadísticas</button>
+                    <button onclick="showDeletedVideos()" class="btn btn-warning">🗑️ Videos Eliminados</button>
+                </div>
+                <div id="allowedVideos" class="loading">
+                    <div class="spinner"></div>
+                    <p>Cargando videos permitidos...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📋 Instrucciones de Uso</h3>
+                <ol style="margin: 20px 0; padding-left: 20px;">
+                                         <li><strong>Ver todos los videos:</strong> Ve a la pestaña "Google Drive" para ver todos tus archivos</li>
+                    <li><strong>Agregar video:</strong> Haz clic en "✅ Agregar" junto al video que quieras permitir</li>
+                    <li><strong>Ocultar video:</strong> Usa "❌ Ocultar" para desactivar temporalmente un video</li>
+                    <li><strong>Reactivar video:</strong> Usa "✅ Reactivar" para volver a activar un video oculto</li>
+                    <li><strong>Eliminar video:</strong> Usa "🗑️ Eliminar" para removerlo completamente</li>
+                    <li><strong>Generar tokens:</strong> Solo los videos permitidos aparecerán al generar tokens</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+                         // Variables globales
+        let currentTab = 'dashboard';
+        let tokens = [];
+        let onedriveFiles = [];
+        let isRateLimited = false;
+        let rateLimitRetryCount = 0;
+        const maxRateLimitRetries = 5;
+
+                         // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboard();
+            loadTokens();
+            checkOneDriveStatus();
+            loadOneDriveFiles();
+        });
+
+        // Función helper para manejar fetch con rate limiting
+        async function fetchWithRateLimit(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                
+                // Verificar si es un error 429 (rate limiting)
+                if (response.status === 429) {
+                    let retryAfter = parseInt(response.headers.get('retry-after')) || 2;
+                    
+                    // Limitar el tiempo máximo de espera a 10 segundos
+                    if (retryAfter > 10) {
+                        retryAfter = 10;
+                        console.log('Tiempo de espera limitado a 10 segundos máximo');
+                    }
+                    
+                    // Incrementar contador de reintentos por rate limiting
+                    rateLimitRetryCount++;
+                    
+                    if (rateLimitRetryCount > maxRateLimitRetries) {
+                        console.error('Demasiados reintentos por rate limiting');
+                        throw new Error('Demasiados reintentos por rate limiting. Recarga la página o espera unos minutos.');
+                    }
+                    
+                    console.log(`Rate limiting activo. Esperando ${retryAfter} segundos... (intento ${rateLimitRetryCount}/${maxRateLimitRetries})`);
+                    
+                    // Mostrar mensaje de rate limiting en la interfaz
+                    showRateLimitMessage(retryAfter);
+                    
+                    // Esperar el tiempo especificado antes de reintentar
+                    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                    
+                    // Ocultar mensaje de rate limiting
+                    hideRateLimitMessage();
+                    
+                    // Reintentar la solicitud
+                    return fetchWithRateLimit(url, options);
+                }
+                
+                // Resetear contador de rate limiting si la solicitud fue exitosa
+                if (response.ok) {
+                    rateLimitRetryCount = 0;
+                    isRateLimited = false;
+                }
+                
+                return response;
+                
+            } catch (error) {
+                console.error('Error en fetchWithRateLimit:', error);
+                throw error;
+            }
+        }
+
+        // Mostrar mensaje de rate limiting
+        function showRateLimitMessage(seconds) {
+            // Crear o actualizar mensaje de rate limiting
+            let rateLimitDiv = document.getElementById('rateLimitMessage');
+            if (!rateLimitDiv) {
+                rateLimitDiv = document.createElement('div');
+                rateLimitDiv.id = 'rateLimitMessage';
+                rateLimitDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #ffc107;
+                    color: #000;
+                    padding: 15px;
+                    border-radius: 8px;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    max-width: 300px;
+                `;
+                document.body.appendChild(rateLimitDiv);
+            }
+            
+            rateLimitDiv.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+                    <div style="font-weight: bold; margin-bottom: 5px;">Demasiadas solicitudes</div>
+                    <div style="margin-bottom: 15px;">Esperando ${seconds} segundos...</div>
+                    <div style="width: 100%; height: 4px; background: #333; border-radius: 2px; overflow: hidden;">
+                        <div style="height: 100%; background: #667eea; width: 0%; animation: progressBar ${seconds}s linear forwards;"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Agregar estilos CSS para la animación
+            if (!document.getElementById('rateLimitStyles')) {
+                const style = document.createElement('style');
+                style.id = 'rateLimitStyles';
+                style.textContent = `
+                    @keyframes progressBar {
+                        from { width: 0%; }
+                        to { width: 100%; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+
+        // Ocultar mensaje de rate limiting
+        function hideRateLimitMessage() {
+            const rateLimitDiv = document.getElementById('rateLimitMessage');
+            if (rateLimitDiv) {
+                rateLimitDiv.remove();
+            }
+        }
+
+        // Navegación entre tabs
+        function showTab(tabName) {
+            // Ocultar todos los tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Mostrar tab seleccionado
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            currentTab = tabName;
+
+            // Recargar datos si es necesario
+            if (tabName === 'dashboard') {
+                loadDashboard();
+            } else if (tabName === 'manage') {
+                loadTokens();
+                         } else if (tabName === 'onedrive') {
+                 checkOneDriveStatus();
+                 loadOneDriveFiles();
+            } else if (tabName === 'videos') {
+                loadAllowedVideos();
+            }
+        }
+
+                // Dashboard
+        async function loadDashboard() {
+            try {
+                const [statsResponse, googledriveResponse] = await Promise.all([
+                    fetchWithRateLimit('/api/access/stats'),
+                    fetchWithRateLimit('/api/googledrive/status')
+                ]);
+
+                const stats = await statsResponse.json();
+                const googledrive = await googledriveResponse.json();
+
+                if (stats.success) {
+                    document.getElementById('totalTokens').textContent = stats.data.total_tokens || 0;
+                    document.getElementById('usedTokens').textContent = stats.data.used_tokens || 0;
+                    document.getElementById('expiredTokens').textContent = stats.data.expired_tokens || 0;
+                    document.getElementById('totalViews').textContent = stats.data.total_views || 0;
+
+                    document.getElementById('dashboardStats').innerHTML = `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                            <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                                <h4>Tokens Activos</h4>
+                                <p style="font-size: 1.5rem; color: #667eea; font-weight: bold;">
+                                    ${(stats.data.total_tokens || 0) - (stats.data.expired_tokens || 0)}
+                                </p>
+                            </div>
+                            <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                                <h4>Tokens Expirados</h4>
+                                <p style="font-size: 1.5rem; color: #dc3545; font-weight: bold;">
+                                    ${stats.data.expired_tokens || 0}
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                                                          if (googledrive.success) {
+             const status = googledrive.data.connected ? 'Conectado' : 'Desconectado';
+             const statusClass = googledrive.data.connected ? 'status-connected' : 'status-disconnected';
+                      
+                      document.getElementById('onedriveStatus').innerHTML = `
+                          <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                              <span class="status-indicator ${statusClass}"></span>
+                              <strong>Estado: ${status}</strong>
+                          </div>
+                          <p><strong>Mensaje:</strong> ${googledrive.data.message}</p>
+                      `;
+                  }
+
+            } catch (error) {
+                console.error('Error cargando dashboard:', error);
+                showAlert('Error al cargar el dashboard', 'error');
+            }
+        }
+
+        // Generar token individual
+        document.getElementById('tokenForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const videoId = document.getElementById('videoId').value;
+            const expiresIn = parseInt(document.getElementById('expiresIn').value);
+            const maxViews = parseInt(document.getElementById('maxViews').value);
+            const maxDevices = parseInt(document.getElementById('maxDevices').value);
+            const shareBlocked = document.getElementById('shareBlocked').checked;
+            const notes = document.getElementById('notes').value || null;
+
+            if (!email || !videoId) {
+                showAlert('Email y ID del video son obligatorios', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetchWithRateLimit('/api/tokens/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        video_id: videoId,
+                        expires_in_hours: expiresIn,
+                        max_views: maxViews,
+                        max_devices: maxDevices,
+                        share_blocked: shareBlocked,
+                        notes: notes
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Token seguro generado exitosamente!', 'success');
+                    document.getElementById('tokenForm').reset();
+                    document.getElementById('shareBlocked').checked = true;
+                    
+                    // Generar URL de visualización
+                    const watchUrl = `${window.location.origin}/watch/${result.data.token}`;
+                    navigator.clipboard.writeText(watchUrl);
+                    showAlert('URL copiada al portapapeles!', 'info');
+                    
+                    // Recargar tokens
+                    loadTokens();
+                } else {
+                    showAlert(result.message || 'Error al generar token', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al generar token', 'error');
+            }
+        });
+
+        // Generar tokens en lote
+        document.getElementById('bulkTokenForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                count: parseInt(document.getElementById('bulkCount').value),
+                videoId: document.getElementById('bulkVideoId').value,
+                expiresIn: parseInt(document.getElementById('bulkExpiresIn').value),
+                maxViews: parseInt(document.getElementById('bulkMaxViews').value),
+                notes: document.getElementById('bulkNotes').value || null
+            };
+
+            try {
+                const response = await fetchWithRateLimit('/api/access/generate-bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert(`${result.data.length} tokens generados exitosamente!`, 'success');
+                    document.getElementById('bulkTokenForm').reset();
+                    
+                    // Mostrar tokens generados
+                    let urls = result.data.map(t => t.watchUrl).join('\n');
+                    navigator.clipboard.writeText(urls);
+                    showAlert('URLs copiadas al portapapeles!', 'info');
+                    
+                    // Recargar dashboard
+                    if (currentTab === 'dashboard') {
+                        loadDashboard();
+                    }
+                } else {
+                    showAlert(result.error || 'Error al generar tokens', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al generar tokens', 'error');
+            }
+        });
+
+        // Cargar tokens
+        async function loadTokens() {
+            try {
+                const response = await fetchWithRateLimit('/api/access/tokens');
+                const result = await response.json();
+
+                if (result.success) {
+                    tokens = result.data;
+                    displayTokens();
+                } else {
+                    showAlert('Error al cargar tokens', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al cargar tokens', 'error');
+            }
+        }
+
+        // Mostrar tokens
+        function displayTokens() {
+            const container = document.getElementById('tokenList');
+            
+            if (tokens.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6c757d;">No hay tokens generados aún</p>';
+                return;
+            }
+
+            container.innerHTML = tokens.map(token => `
+                <div class="token-item">
+                    <div class="token-header">
+                        <span class="token-token">${token.token}</span>
+                        <button onclick="deleteToken(${token.id})" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️</button>
+                    </div>
+                    <a href="${token.watch_url || `/watch/${token.token}`}" target="_blank" class="token-url">
+                        ${window.location.origin}/watch/${token.token}
+                    </a>
+                    <div class="token-meta">
+                        <div><strong>Email:</strong> ${token.email || 'Sin restricción'}</div>
+                        <div><strong>Expira:</strong> ${new Date(token.expires_at * 1000).toLocaleString()}</div>
+                        <div><strong>Vistas:</strong> ${token.current_views}/${token.max_views}</div>
+                        <div><strong>Estado:</strong> ${token.used ? 'Usado' : 'Disponible'}</div>
+                        <div><strong>Notas:</strong> ${token.notes || 'Sin notas'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Eliminar token
+        async function deleteToken(tokenId) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este token?')) {
+                return;
+            }
+
+            try {
+                const response = await fetchWithRateLimit(`/api/access/tokens/${tokenId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Token eliminado exitosamente', 'success');
+                    loadTokens();
+                    if (currentTab === 'dashboard') {
+                        loadDashboard();
+                    }
+                } else {
+                    showAlert(result.error || 'Error al eliminar token', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al eliminar token', 'error');
+            }
+        }
+
+                                 // Verificar estado de Google Drive
+        async function checkOneDriveStatus() {
+            try {
+                const response = await fetchWithRateLimit('/api/googledrive/status');
+                const result = await response.json();
+
+                if (result.connected !== undefined) {
+                    const status = result.connected ? 'Conectado' : 'Desconectado';
+                    const statusClass = result.connected ? 'status-connected' : 'status-disconnected';
+                    
+                    document.getElementById('onedriveConnection').innerHTML = `
+                        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                            <span class="status-indicator ${statusClass}"></span>
+                            <strong>Estado: ${status}</strong>
+                        </div>
+                        <p><strong>Mensaje:</strong> ${result.message}</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('onedriveConnection').innerHTML = 
+                    '<p style="color: #dc3545;">Error al verificar estado de OneDrive</p>';
+            }
+        }
+
+                                 // Cargar archivos de Google Drive
+        async function loadOneDriveFiles() {
+            try {
+                const response = await fetchWithRateLimit('/api/googledrive/files');
+                const result = await response.json();
+
+                if (Array.isArray(result)) {
+                    onedriveFiles = result;
+                    displayOneDriveFiles();
+                } else {
+                    document.getElementById('onedriveFiles').innerHTML = 
+                        `<p style="color: #dc3545;">${result.error || 'Error al cargar archivos'}</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('onedriveFiles').innerHTML = 
+                    '<p style="color: #dc3545;">Error al cargar archivos</p>';
+            }
+        }
+        
+        // Variables para gestión de videos
+        let showingHiddenVideos = false;
+        
+        // Cargar videos permitidos
+        async function loadAllowedVideos() {
+            try {
+                const response = await fetchWithRateLimit('/api/videos');
+                const result = await response.json();
+
+                if (result.success) {
+                    displayAllowedVideos(result.data);
+                } else {
+                    console.error('Error cargando videos permitidos:', result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        // Cargar videos ocultos
+        async function loadHiddenVideos() {
+            try {
+                const response = await fetchWithRateLimit('/api/videos/hidden');
+                const result = await response.json();
+
+                if (result.success) {
+                    displayHiddenVideos(result.data);
+                } else {
+                    console.error('Error cargando videos ocultos:', result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        // Cambiar entre vista de videos activos y ocultos
+        function toggleVideosView() {
+            showingHiddenVideos = !showingHiddenVideos;
+            const btn = document.getElementById('toggleVideosBtn');
+            
+            if (showingHiddenVideos) {
+                btn.textContent = '✅ Mostrar Videos Activos';
+                btn.className = 'btn btn-success';
+                loadHiddenVideos();
+            } else {
+                btn.textContent = '👁️ Mostrar Videos Ocultos';
+                btn.className = 'btn btn-secondary';
+                loadAllowedVideos();
+            }
+        }
+        
+        // Mostrar videos permitidos
+        function displayAllowedVideos(videos) {
+            const container = document.getElementById('allowedVideos');
+            if (!container) return;
+            
+            if (videos.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6c757d;">No hay videos permitidos aún</p>';
+                return;
+            }
+
+            container.innerHTML = videos.map(video => `
+                <div class="token-item">
+                    <div class="token-header">
+                        <strong>${video.title || 'Sin título'}</strong>
+                        <div>
+                            <button onclick="editVideoNotes('${video.video_id}', '${video.title || ''}', '${video.notes || ''}')" class="btn btn-info" style="padding: 5px 10px; font-size: 0.8rem;">📝 Editar</button>
+                            <button onclick="toggleVideoStatus('${video.video_id}', false)" class="btn btn-warning" style="padding: 5px 10px; font-size: 0.8rem;">❌ Ocultar</button>
+                            <button onclick="removeVideo('${video.video_id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                    <div class="token-meta">
+                        <div><strong>ID:</strong> ${video.video_id || 'Sin ID'}</div>
+                        <div><strong>Tamaño:</strong> ${formatFileSize(video.file_size || 0)}</div>
+                        <div><strong>Agregado:</strong> ${video.created_at ? new Date(video.created_at).toLocaleString() : 'Fecha no disponible'}</div>
+                        <div><strong>Notas:</strong> ${video.notes || 'Sin notas'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Mostrar videos ocultos
+        function displayHiddenVideos(videos) {
+            const container = document.getElementById('allowedVideos');
+            if (!container) return;
+            
+            if (videos.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6c757d;">No hay videos ocultos</p>';
+                return;
+            }
+
+            container.innerHTML = videos.map(video => `
+                <div class="token-item" style="border-left-color: #ffc107; opacity: 0.8;">
+                    <div class="token-header">
+                        <strong>${video.title || 'Sin título'} <span style="color: #ffc107;">(OCULTO)</span></strong>
+                        <div>
+                            <button onclick="toggleVideoStatus('${video.video_id}', true)" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;">✅ Reactivar</button>
+                            <button onclick="removeVideo('${video.video_id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                    <div class="token-meta">
+                        <div><strong>ID:</strong> ${video.video_id || 'Sin ID'}</div>
+                        <div><strong>Tamaño:</strong> ${formatFileSize(video.file_size || 0)}</div>
+                        <div><strong>Ocultado:</strong> ${video.created_at ? new Date(video.created_at).toLocaleString() : 'Fecha no disponible'}</div>
+                        <div><strong>Notas:</strong> ${video.notes || 'Sin notas'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Agregar video a la lista de permitidos
+        async function addVideoToAllowed(googleDriveId, name, size, mimeType, createdTime) {
+            try {
+                const response = await fetchWithRateLimit('/api/videos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        video_id: googleDriveId,
+                        title: name,
+                        description: `Video de Google Drive: ${name}`,
+                        file_size: size,
+                        duration: 0,
+                        notes: 'Agregado automáticamente desde Google Drive'
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Video agregado a la lista de permitidos', 'success');
+                    loadAllowedVideos();
+                } else {
+                    showAlert(result.error || 'Error al agregar video', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al agregar video', 'error');
+            }
+        }
+        
+        // Remover video de la lista de permitidos
+        async function removeVideo(googleDriveId) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este video de la lista de permitidos?')) {
+                return;
+            }
+
+            try {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Video removido exitosamente', 'success');
+                    loadAllowedVideos();
+                } else {
+                    showAlert(result.error || 'Error al remover video', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al remover video', 'error');
+            }
+        }
+        
+        // Cambiar estado de un video
+        async function toggleVideoStatus(googleDriveId, isActive) {
+            try {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}/toggle`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ isActive })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    if (showingHiddenVideos) {
+                        loadHiddenVideos();
+                    } else {
+                        loadAllowedVideos();
+                    }
+                } else {
+                    showAlert(result.error || 'Error al cambiar estado', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al cambiar estado', 'error');
+            }
+        }
+        
+        // Editar notas de un video
+        function editVideoNotes(googleDriveId, name, currentNotes) {
+            const newNotes = prompt(`Editar notas para "${name}":`, currentNotes);
+            
+            if (newNotes !== null) {
+                updateVideoNotes(googleDriveId, newNotes);
+            }
+        }
+        
+        // Actualizar notas de un video
+        async function updateVideoNotes(googleDriveId, notes) {
+            try {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}/notes`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ notes })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Notas actualizadas exitosamente', 'success');
+                    if (showingHiddenVideos) {
+                        loadHiddenVideos();
+                    } else {
+                        loadAllowedVideos();
+                    }
+                } else {
+                    showAlert(result.error || 'Error al actualizar notas', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al actualizar notas', 'error');
+            }
+        }
+        
+        // Mostrar estadísticas de videos
+        async function showVideoStats() {
+            try {
+                const response = await fetchWithRateLimit('/api/videos/stats');
+                const result = await response.json();
+
+                if (result.success) {
+                    const stats = result.data;
+                    const statsHtml = `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                            <div style="text-align: center; padding: 20px; background: #d4edda; border-radius: 8px; border-left: 4px solid #28a745;">
+                                <h4>Videos Activos</h4>
+                                <p style="font-size: 1.5rem; color: #28a745; font-weight: bold;">${stats.active_videos}</p>
+                            </div>
+                            <div style="text-align: center; padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                                <h4>Videos Ocultos</h4>
+                                <p style="font-size: 1.5rem; color: #856404; font-weight: bold;">${stats.hidden_videos}</p>
+                            </div>
+                            <div style="text-align: center; padding: 20px; background: #d1ecf1; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                                <h4>Total de Videos</h4>
+                                <p style="font-size: 1.5rem; color: #0c5460; font-weight: bold;">${stats.total_videos}</p>
+                            </div>
+                            <div style="text-align: center; padding: 20px; background: #f8d7da; border-radius: 8px; border-left: 4px solid #dc3545;">
+                                <h4>Espacio Total</h4>
+                                <p style="font-size: 1.5rem; color: #721c24; font-weight: bold;">${formatFileSize(stats.total_size)}</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Crear modal con estadísticas
+                    const modal = document.createElement('div');
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 1000;
+                    `;
+                    
+                    modal.innerHTML = `
+                        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 800px; max-height: 80vh; overflow-y: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2>📊 Estadísticas de Videos</h2>
+                                <button onclick="this.closest('.modal').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                            </div>
+                            ${statsHtml}
+                            <div style="text-align: center;">
+                                <button onclick="this.closest('.modal').remove()" class="btn btn-primary">Cerrar</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    modal.className = 'modal';
+                    document.body.appendChild(modal);
+                    
+                    // Cerrar modal al hacer clic fuera
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            modal.remove();
+                        }
+                    });
+                } else {
+                    showAlert('Error al cargar estadísticas', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al cargar estadísticas', 'error');
+            }
+        }
+        
+        // Mostrar videos eliminados
+        async function showDeletedVideos() {
+            try {
+                const response = await fetchWithRateLimit('/api/videos/deleted');
+                const result = await response.json();
+
+                if (result.success) {
+                    const videos = result.data;
+                    
+                    if (videos.length === 0) {
+                        showAlert('No hay videos eliminados', 'info');
+                        return;
+                    }
+                    
+                    const videosHtml = videos.map(video => `
+                        <div class="token-item" style="border-left-color: #dc3545; opacity: 0.7;">
+                            <div class="token-header">
+                                <strong>${video.title || 'Sin título'} <span style="color: #dc3545;">(ELIMINADO)</span></strong>
+                                <div>
+                                    <button onclick="restoreVideo('${video.video_id}')" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;">🔄 Restaurar</button>
+                                    <button onclick="permanentlyDeleteVideo('${video.video_id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">🗑️ Eliminar Permanentemente</button>
+                                </div>
+                            </div>
+                            <div class="token-meta">
+                                <div><strong>ID:</strong> ${video.video_id || 'Sin ID'}</div>
+                                <div><strong>Tamaño:</strong> ${formatFileSize(video.file_size || 0)}</div>
+                                <div><strong>Eliminado:</strong> ${video.created_at ? new Date(video.created_at).toLocaleString() : 'Fecha no disponible'}</div>
+                                <div><strong>Notas:</strong> ${video.notes || 'Sin notas'}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    // Crear modal con videos eliminados
+                    const modal = document.createElement('div');
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 1000;
+                    `;
+                    
+                    modal.innerHTML = `
+                        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 800px; max-height: 80vh; overflow-y: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2>🗑️ Videos Eliminados</h2>
+                                <button onclick="this.closest('.modal').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                            </div>
+                            <div style="margin-bottom: 20px;">
+                                <p>Estos videos han sido eliminados pero pueden ser restaurados:</p>
+                            </div>
+                            ${videosHtml}
+                            <div style="text-align: center; margin-top: 20px;">
+                                <button onclick="this.closest('.modal').remove()" class="btn btn-primary">Cerrar</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    modal.className = 'modal';
+                    document.body.appendChild(modal);
+                    
+                    // Cerrar modal al hacer clic fuera
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            modal.remove();
+                        }
+                    });
+                } else {
+                    showAlert('Error al cargar videos eliminados', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al cargar videos eliminados', 'error');
+            }
+        }
+        
+        // Restaurar video eliminado
+        async function restoreVideo(googleDriveId) {
+            try {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}/restore`, {
+                    method: 'PATCH'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Video restaurado exitosamente', 'success');
+                    // Cerrar modal y recargar
+                    document.querySelector('.modal').remove();
+                    loadAllowedVideos();
+                } else {
+                    showAlert(result.error || 'Error al restaurar video', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al restaurar video', 'error');
+            }
+        }
+        
+        // Eliminar permanentemente un video
+        async function permanentlyDeleteVideo(googleDriveId) {
+            if (!confirm('¿Estás seguro de que quieres eliminar PERMANENTEMENTE este video? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            try {
+                const response = await fetchWithRateLimit(`/api/videos/${googleDriveId}/permanent`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Video eliminado permanentemente', 'success');
+                    // Cerrar modal y recargar
+                    document.querySelector('.modal').remove();
+                    loadAllowedVideos();
+                } else {
+                    showAlert(result.error || 'Error al eliminar video', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al eliminar video', 'error');
+            }
+        }
+
+                 // Mostrar archivos de OneDrive
+         function displayOneDriveFiles() {
+             const container = document.getElementById('onedriveFiles');
+             
+             if (onedriveFiles.length === 0) {
+                 container.innerHTML = '<p style="text-align: center; color: #6c757d;">No hay archivos en OneDrive</p>';
+                 return;
+             }
+
+             container.innerHTML = onedriveFiles.map(file => `
+                 <div class="token-item">
+                     <div class="token-header">
+                         <strong>${file.name}</strong>
+                         <div>
+                             <button onclick="addVideoToAllowed('${file.id}', '${file.name}', ${file.size || 0}, '${file.mimeType || 'video/mp4'}', '${file.createdTime || new Date().toISOString()}')" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;">✅ Agregar</button>
+                             <span class="token-token">${file.id}</span>
+                         </div>
+                     </div>
+                     <div class="token-meta">
+                         <div><strong>Tamaño:</strong> ${formatFileSize(file.size)}</div>
+                         <div><strong>Modificado:</strong> ${new Date(file.createdTime).toLocaleString()}</div>
+                         <div><strong>Tipo:</strong> ${file.mimeType || 'Desconocido'}</div>
+                     </div>
+                 </div>
+             `).join('');
+         }
+
+                 // Buscar archivos
+         async function searchFiles() {
+             const query = document.getElementById('searchQuery').value.trim();
+             
+             if (!query) {
+                 loadOneDriveFiles();
+                 return;
+             }
+
+                         try {
+                const response = await fetchWithRateLimit(`/api/googledrive/search?q=${encodeURIComponent(query)}`);
+                const result = await response.json();
+
+                 if (Array.isArray(result)) {
+                     onedriveFiles = result;
+                     displayOneDriveFiles();
+                 } else {
+                     showAlert(result.error || 'Error en la búsqueda', 'error');
+                 }
+             } catch (error) {
+                 console.error('Error:', error);
+                 showAlert('Error en la búsqueda', 'error');
+             }
+         }
+
+                         // Obtener URL de autorización
+        async function getAuthUrl() {
+            try {
+                const response = await fetchWithRateLimit('/api/googledrive/auth');
+                const result = await response.json();
+
+                if (result.authUrl) {
+                    const authUrl = result.authUrl;
+                    navigator.clipboard.writeText(authUrl);
+                    showAlert('URL de autorización copiada al portapapeles!', 'info');
+                    
+                    // Abrir en nueva pestaña
+                    window.open(authUrl, '_blank');
+                } else {
+                    showAlert('Error al obtener URL de autorización', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Error al obtener URL de autorización', 'error');
+            }
+        }
+
+        // Utilidades
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.nav-tabs'));
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

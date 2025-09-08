@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Heliopsis Video - Player</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            overflow-x: hidden;
+            animation: gradientShift 10s ease infinite;
+        }
+        
+        /* Eliminar scrollbars de todos los elementos */
+        * {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        
+        *::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        
+        /* Controles personalizados para Vimeo */
+        .video-controls-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .video-wrapper:hover .video-controls-overlay {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .control-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .control-button.active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+        
+        .volume-slider {
+            width: 100px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .volume-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .volume-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .quality-selector {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .quality-selector option {
+            background: #333;
+            color: white;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+        
+        .time-display {
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #2d2d2d 100%); }
+            50% { background: linear-gradient(135deg, #1a1a1a 0%, #000000 50%, #2d2d2d 100%); }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: 25px;
+            margin-top: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .container:hover {
+            transform: translateY(-5px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .logo {
+            width: 120px;
+            height: auto;
+            margin: 0 auto 20px;
+            display: block;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+            animation: logoGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes logoGlow {
+            0% { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)); }
+            100% { filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.6)); }
+        }
+        
+        .title {
+            background: linear-gradient(45deg, #ffffff, #e0e0e0, #cccccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            font-weight: 800;
+            text-align: center;
+            animation: titleGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes titleGlow {
+            0% { filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3)); }
+            100% { filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.6)); }
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            color: #cccccc;
+        }
+        
+        .status-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.15));
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .status-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        
+        .status-message {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #ffffff, #e0e0e0);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .auth-form {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.15));
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        input::placeholder {
+            color: #999;
+        }
+        
+        .auth-btn {
+            background: linear-gradient(45deg, #ffffff, #e0e0e0, #cccccc);
+            background-size: 200% 200%;
+            color: #000000;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: gradientMove 3s ease infinite;
+        }
+        
+        @keyframes gradientMove {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .auth-btn:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(255, 255, 255, 0.4), 0 5px 15px rgba(255, 255, 255, 0.3);
+        }
+        
+        .auth-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .auth-btn:hover::before {
+            left: 100%;
+        }
+        
+        .video-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .video-player {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .video-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .video-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .video-tab {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .video-tab.active {
+            background: linear-gradient(45deg, #ffffff, #e0e0e0);
+            color: #000000;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .video-tab:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .video-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .error-message {
+            background: rgba(255, 107, 107, 0.2);
+            border: 2px solid #ff6b6b;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            color: #ff6b6b;
+        }
+        
+        .success-message {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            color: #ffffff;
+        }
+        
+        .keyboard-shortcuts {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        
+        .keyboard-shortcuts h4 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .shortcut {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 0 2px;
+            font-family: monospace;
+        }
+        
+        /* Popup de mantenimiento */
+        .maintenance-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .maintenance-content {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.15));
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            animation: popupGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes popupGlow {
+            0% { box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 255, 255, 0.1); }
+            100% { box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(255, 255, 255, 0.3); }
+        }
+        
+        .maintenance-logo {
+            width: 80px;
+            height: auto;
+            margin: 0 auto 20px;
+            display: block;
+            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.5));
+        }
+        
+        .maintenance-title {
+            color: #ffffff;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        
+        .maintenance-message {
+            color: #e0e0e0;
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .maintenance-icon {
+            font-size: 3em;
+            color: #007bff;
+            margin-bottom: 20px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+        
+        .maintenance-button {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .maintenance-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 123, 255, 0.4);
+        }
+        
+        .maintenance-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Popup de Mantenimiento en Holandés -->
+    <div id="maintenancePopup" class="maintenance-popup">
+        <div class="maintenance-content">
+            <img src="/logo.png" alt="Heliopsis Logo" class="maintenance-logo">
+            <div class="maintenance-icon">
+                <i class="fas fa-tools"></i>
+            </div>
+            <div class="maintenance-title">
+                Onderhoud in Uitvoering
+            </div>
+            <div class="maintenance-message">
+                Wij werken momenteel aan het oplossen van streamingproblemen vanwege de hoge vraag naar video's. We streven ernaar om dit zo snel mogelijk permanent op te lossen.
+                <br><br>
+                <strong>Bedankt voor uw geduld!</strong>
+            </div>
+            <div class="maintenance-spinner"></div>
+            <button class="maintenance-button" onclick="hideMaintenancePopup()">
+                <i class="fas fa-check"></i> Begrijpen
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <img src="/logo.png" alt="Heliopsis Logo" class="logo">
+            <div class="title"><i class="fas fa-video"></i> Heliopsis Video Player</div>
+            <div class="subtitle"><i class="fas fa-shield-alt"></i> Secure Video Access</div>
+        </div>
+        
+        <!-- Estado de Verificación -->
+        <div id="statusCard" class="status-card">
+            <div class="status-icon"><i class="fas fa-search"></i></div>
+            <div class="status-message">Verifying access...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <!-- Formulario de Autenticación -->
+        <div id="authForm" class="auth-form" style="display: none;">
+            <h3><i class="fas fa-lock"></i> Access Verification</h3>
+            <p>Please enter your email and password to access the content.</p>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email"><i class="fas fa-envelope"></i> Email:</label>
+                    <input type="email" id="email" name="email" placeholder="your@email.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password"><i class="fas fa-key"></i> Password:</label>
+                    <input type="password" id="password" name="password" placeholder="Password" required>
+                </div>
+                
+                <button type="submit" class="auth-btn"><i class="fas fa-check"></i> Verify Access</button>
+            </form>
+        </div>
+        
+        <!-- Reproductor de Video -->
+        <div id="videoContainer" class="video-container" style="display: none;">
+            <div class="video-selector" id="videoSelector">
+                <!-- Los tabs de video se generarán dinámicamente -->
+            </div>
+            
+            <video id="videoPlayer" class="video-player" controls 
+                   oncontextmenu="return false;" 
+                   onselectstart="return false;" 
+                   ondragstart="return false;"
+                   ondrop="return false;"
+                   oncopy="return false;"
+                   oncut="return false;"
+                   onpaste="return false;">
+                Your browser does not support the video element.
+            </video>
+            
+            <div class="video-controls">
+                <button class="control-btn" onclick="skipVideo(10)"><i class="fas fa-forward"></i> +10s</button>
+                <button class="control-btn" onclick="skipVideo(-10)"><i class="fas fa-backward"></i> -10s</button>
+                <button class="control-btn" onclick="toggleFullscreen()"><i class="fas fa-expand"></i> Fullscreen</button>
+                <button class="control-btn" onclick="toggleMute()"><i class="fas fa-volume-mute"></i> Mute</button>
+                <button class="control-btn" onclick="setPlaybackRate(1.25)">1.25x</button>
+                <button class="control-btn" onclick="setPlaybackRate(1.5)">1.5x</button>
+                <button class="control-btn" onclick="setPlaybackRate(1)">1x</button>
+                <button class="control-btn" onclick="toggleQuality()"><i class="fas fa-cog"></i> Quality: <span id="currentQuality">4K</span></button>
+            </div>
+            
+            <div class="video-info">
+                <p><strong>Authorized Email:</strong> <span id="authorizedEmail"></span></p>
+                <p><strong>Views Used:</strong> <span id="viewsUsed"></span></p>
+            </div>
+            
+            <div class="keyboard-shortcuts">
+                <h4><i class="fas fa-keyboard"></i> Keyboard Shortcuts</h4>
+                <p>
+                    <span class="shortcut">Space</span> Play/Pause | 
+                    <span class="shortcut">←</span> -10s | 
+                    <span class="shortcut">→</span> +10s | 
+                    <span class="shortcut">F</span> Fullscreen | 
+                    <span class="shortcut">M</span> Mute
+                </p>
+            </div>
+        </div>
+        
+        <!-- Mensajes de Error/Éxito -->
+        <div id="messageContainer"></div>
+    </div>
+
+    <script>
+        // Obtener token de la URL
+        const token = window.location.pathname.split('/').pop();
+        let currentVideoIndex = 0;
+        let videoIds = [];
+        let authorizedEmail = '';
+        let currentQuality = '4K'; // Calidad actual
+        let currentVideoId = ''; // ID del video actual
+        
+        // Elementos del DOM
+        const statusCard = document.getElementById('statusCard');
+        const authForm = document.getElementById('authForm');
+        const videoContainer = document.getElementById('videoContainer');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoSelector = document.getElementById('videoSelector');
+        const messageContainer = document.getElementById('messageContainer');
+        
+        // Función para ocultar el popup de mantenimiento
+        function hideMaintenancePopup() {
+            const popup = document.getElementById('maintenancePopup');
+            if (popup) {
+                popup.style.opacity = '0';
+                popup.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => {
+                    popup.style.display = 'none';
+                }, 500);
+            }
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mostrar popup de mantenimiento por 8 segundos (más tiempo para leer)
+            setTimeout(() => {
+                hideMaintenancePopup();
+            }, 8000);
+            
+            checkAccess();
+            setupKeyboardShortcuts();
+            setupDownloadProtection();
+        });
+        
+        // Configurar protección contra descargas
+        function setupDownloadProtection() {
+            // BLOQUEO TOTAL del menú contextual - MÚLTIPLES CAPAS
+            document.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, true);
+            
+            // Bloqueo específico en el video
+            videoPlayer.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, true);
+            
+            // Bloqueo adicional en el contenedor del video
+            const videoContainer = document.getElementById('videoContainer');
+            if (videoContainer) {
+                videoContainer.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }, true);
+            }
+            
+            // Deshabilitar teclas de acceso directo para descarga (más específicas)
+            document.addEventListener('keydown', (e) => {
+                // Solo bloquear Ctrl+S y Ctrl+Shift+S para descarga
+                if ((e.ctrlKey && (e.key === 's' || e.key === 'S')) || 
+                    (e.ctrlKey && e.shiftKey && (e.key === 's' || e.key === 'S'))) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showMessage('<i class="fas fa-shield-alt"></i> Download blocked for security', 'warning');
+                    return false;
+                }
+            });
+            
+            // Bloquear arrastrar y soltar solo del video
+            videoPlayer.addEventListener('dragstart', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            videoPlayer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Bloquear selección de texto solo del video
+            videoPlayer.addEventListener('selectstart', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Bloquear copiar/pegar solo del video
+            videoPlayer.addEventListener('copy', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            videoPlayer.addEventListener('cut', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            videoPlayer.addEventListener('paste', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Protección específica para el video - BLOQUEO TOTAL
+            videoPlayer.addEventListener('loadstart', () => {
+                // Deshabilitar controles nativos de descarga
+                videoPlayer.controls = true;
+                videoPlayer.autoplay = false;
+                videoPlayer.preload = 'metadata';
+                
+                // Agregar atributos de protección MÁXIMA
+                videoPlayer.setAttribute('controlsList', 'nodownload nofullscreen noremoteplayback');
+                videoPlayer.setAttribute('disablePictureInPicture', 'true');
+                videoPlayer.setAttribute('disableRemotePlayback', 'true');
+                
+                // BLOQUEO TOTAL del menú contextual
+                videoPlayer.oncontextmenu = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                };
+                
+                // Bloqueo adicional con múltiples eventos
+                ['contextmenu', 'mousedown', 'mouseup', 'click'].forEach(eventType => {
+                    videoPlayer.addEventListener(eventType, function(e) {
+                        if (e.button === 2) { // Botón derecho del mouse
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                        }
+                    }, true);
+                });
+            });
+            
+            // Bloquear eventos de descarga del video
+            videoPlayer.addEventListener('loadedmetadata', () => {
+                // Deshabilitar descarga por URL directa
+                if (videoPlayer.src) {
+                    const originalSrc = videoPlayer.src;
+                    videoPlayer.addEventListener('error', () => {
+                        // Si hay error, intentar recargar con token
+                        videoPlayer.src = originalSrc;
+                    });
+                }
+            });
+            
+            console.log('🛡️ Download protection activated (video-specific)');
+        }
+        
+        // Verificar acceso al token
+        async function checkAccess() {
+            try {
+                updateStatus('<i class="fas fa-search"></i> Verifying token...', 20);
+                
+                console.log(`🔍 Frontend: Verificando token ${token}`);
+                
+                // PRIMERO: Intentar sistema de emergencia (tokens hardcodeados)
+                let response = await fetch(`/api/emergency-token/${token}`);
+                console.log(`📡 Frontend: Emergency response status: ${response.status}`);
+                
+                let data = await response.json();
+                console.log(`📋 Frontend: Emergency response data:`, data);
+                
+                // Si el sistema de emergencia no encuentra el token, intentar base de datos
+                if (!data.success) {
+                    console.log(`🔄 Frontend: Token no encontrado en emergencia, intentando base de datos...`);
+                    
+                    response = await fetch(`/api/video-simple/check-simple/${token}`);
+                    console.log(`📡 Frontend: Database response status: ${response.status}`);
+                    
+                    data = await response.json();
+                    console.log(`📋 Frontend: Database response data:`, data);
+                }
+                
+                if (data.success) {
+                    console.log(`✅ Frontend: Token válido, mostrando formulario`);
+                    updateStatus('<i class="fas fa-check"></i> Token valid', 60);
+                    
+                    // Show authentication form
+                    showEmailForm(data.data);
+                } else {
+                    console.log(`❌ Frontend: Token inválido:`, data.error);
+                    showError('<i class="fas fa-times"></i> Invalid or expired token');
+                }
+            } catch (error) {
+                console.error('❌ Frontend: Error verifying token:', error);
+                console.error('❌ Frontend: Error details:', error.message);
+                showError('<i class="fas fa-exclamation-triangle"></i> Error verifying access');
+            }
+        }
+        
+        // Show email and password form
+        function showEmailForm(tokenData) {
+            updateStatus('<i class="fas fa-lock"></i> Authentication required', 80);
+            
+            videoIds = tokenData.video_ids;
+            authorizedEmail = tokenData.email;
+            
+            setTimeout(() => {
+                statusCard.style.display = 'none';
+                authForm.style.display = 'block';
+            }, 1000);
+        }
+        
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                // PRIMERO: Intentar sistema de emergencia
+                let response = await fetch(`/api/emergency-token/${token}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                let data = await response.json();
+                
+                // Si el sistema de emergencia falla, intentar base de datos
+                if (!data.success) {
+                    console.log(`🔄 Frontend: Credenciales no válidas en emergencia, intentando base de datos...`);
+                    
+                    response = await fetch(`/api/video-simple/check-simple/${token}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            password: password
+                        })
+                    });
+                    
+                    data = await response.json();
+                }
+                
+                if (data.success) {
+                    showSuccess('<i class="fas fa-check"></i> Access authorized');
+                    loadVideoPlayer(data.data);
+                } else {
+                    showError('<i class="fas fa-times"></i> Incorrect credentials');
+                }
+            } catch (error) {
+                console.error('Error validating credentials:', error);
+                showError('<i class="fas fa-exclamation-triangle"></i> Error validating credentials');
+            }
+        });
+        
+        // Load video player
+        function loadVideoPlayer(tokenData) {
+            setTimeout(() => {
+                authForm.style.display = 'none';
+                videoContainer.style.display = 'block';
+                
+                // Configure user information
+                document.getElementById('authorizedEmail').textContent = tokenData.email;
+                document.getElementById('viewsUsed').textContent = `${tokenData.views}/${tokenData.max_views}`;
+                
+                // Mostrar lista de videos para selección
+                showVideoList();
+            }, 1000);
+        }
+        
+        // Create video selector
+        function createVideoSelector() {
+            videoSelector.innerHTML = '';
+            
+            // Get video names from Google Drive
+            fetch('/api/googledrive/files')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        const videoMap = {};
+                        data.data.forEach(video => {
+                            videoMap[video.id] = video.name;
+                        });
+                        
+                        videoIds.forEach((videoId, index) => {
+                            const videoName = videoMap[videoId] || `Video ${index + 1}`;
+                            
+                            const tab = document.createElement('button');
+                            tab.className = 'video-tab';
+                            tab.textContent = videoName;
+                            tab.onclick = () => switchVideo(index);
+                            
+                            if (index === 0) {
+                                tab.classList.add('active');
+                            }
+                            
+                            videoSelector.appendChild(tab);
+                        });
+                        
+                        // Load first video
+                        if (videoIds.length > 0) {
+                            loadVideo(videoIds[0], 0);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading video names:', error);
+                    // Fallback with generic names
+                    videoIds.forEach((videoId, index) => {
+                        const videoName = `Video ${index + 1}`;
+                        
+                        const tab = document.createElement('button');
+                        tab.className = 'video-tab';
+                        tab.textContent = videoName;
+                        tab.onclick = () => switchVideo(index);
+                        
+                        if (index === 0) {
+                            tab.classList.add('active');
+                        }
+                        
+                        videoSelector.appendChild(tab);
+                    });
+                    
+                    // Load first video
+                    if (videoIds.length > 0) {
+                        loadVideo(videoIds[0], 0);
+                    }
+                });
+        }
+        
+        // Switch video
+        function switchVideo(index) {
+            currentVideoIndex = index;
+            
+            // Actualizar tabs activos
+            document.querySelectorAll('.video-tab').forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            
+            // Cargar video
+            loadVideo(videoIds[index], index);
+        }
+        
+        // Load specific video
+        function loadVideo(videoId, videoName) {
+            currentVideoId = videoId; // Guardar ID del video actual
+            
+            console.log(`🎬 Loading video: ${videoName} (ID: ${videoId}) in quality: ${currentQuality}`);
+            
+            // Intentar Vimeo primero
+            console.log('🎥 Intentando Vimeo como fuente principal...');
+            
+            // Mostrar el elemento video
+            videoPlayer.style.display = 'block';
+            
+            // Limpiar el contenedor de iframe si existe
+            const videoContainer = document.getElementById('videoContainer');
+            videoContainer.innerHTML = '';
+            
+            // Crear iframe para Vimeo
+            const vimeoUrl = `/api/vimeo/stream/${videoId}`;
+            console.log(`🔗 Vimeo URL: ${vimeoUrl}`);
+            
+            // Crear iframe para Vimeo con tamaño completo y sin scroll
+            const iframe = document.createElement('iframe');
+            iframe.src = vimeoUrl;
+            iframe.style.cssText = `
+                width: 100%;
+                height: 100%;
+                border: none;
+                background: #000;
+                position: absolute;
+                top: 0;
+                left: 0;
+                overflow: hidden;
+            `;
+            iframe.frameBorder = '0';
+            iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+            iframe.allowFullscreen = true;
+            iframe.scrolling = 'no';
+            
+            // Crear contenedor con aspect ratio 16:9 para el video
+            const videoWrapper = document.createElement('div');
+            videoWrapper.className = 'video-wrapper';
+            videoWrapper.style.cssText = `
+                width: 100%;
+                aspect-ratio: 16/9;
+                position: relative;
+                background: #000;
+                border-radius: 15px;
+                overflow: hidden;
+                margin: 20px 0;
+            `;
+            
+            // Crear controles personalizados
+            const controlsOverlay = document.createElement('div');
+            controlsOverlay.className = 'video-controls-overlay';
+            controlsOverlay.innerHTML = `
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="controls-row">
+                    <button class="control-button" id="playPauseBtn">
+                        <i class="fas fa-play" id="playIcon"></i>
+                        <span id="playText">Play</span>
+                    </button>
+                    <div class="volume-control">
+                        <i class="fas fa-volume-up" id="volumeIcon"></i>
+                        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100">
+                        <span id="volumeText">100%</span>
+                    </div>
+                    <select class="quality-selector" id="qualitySelector">
+                        <option value="4K">4K</option>
+                        <option value="1080p">1080p</option>
+                        <option value="720p">720p</option>
+                        <option value="480p">480p</option>
+                    </select>
+                    <button class="control-button" id="fullscreenBtn">
+                        <i class="fas fa-expand"></i>
+                        <span>Fullscreen</span>
+                    </button>
+                    <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+                </div>
+            `;
+            
+            videoWrapper.appendChild(iframe);
+            videoWrapper.appendChild(controlsOverlay);
+            
+            // Ocultar el elemento video y mostrar el wrapper del video
+            videoPlayer.style.display = 'none';
+            videoContainer.appendChild(videoWrapper);
+            
+            // Show loading message
+            showMessage(`<i class="fas fa-video"></i> Loading ${videoName}...`, 'info');
+            
+            // Manejar errores del iframe
+            iframe.onerror = () => {
+                console.log('❌ Error cargando Vimeo, intentando Google Drive como fallback...');
+                loadVideoWithGoogleDriveFallback(videoId, videoName);
+            };
+            
+            iframe.onload = () => {
+                console.log('✅ Video cargado exitosamente');
+                showMessage(`<i class="fas fa-check"></i> Video ready to play`, 'success');
+                
+                // Inicializar controles personalizados
+                initializeCustomControls(iframe, videoWrapper);
+            };
+        }
+        
+        function loadVideoWithGoogleDriveFallback(videoId, videoName) {
+            console.log('🔄 Usando Google Drive como fallback...');
+            
+            const videoUrl = `/api/video-simple/stream-simple/${token}/${videoId}?quality=${currentQuality}`;
+            console.log(`🔗 Google Drive URL: ${videoUrl}`);
+            
+            // Mostrar el elemento video
+            videoPlayer.style.display = 'block';
+            
+            // Limpiar el contenedor de iframe
+            const videoContainer = document.getElementById('videoContainer');
+            videoContainer.innerHTML = '';
+            
+            // Usar el elemento video para streaming directo
+            videoPlayer.src = videoUrl;
+            videoPlayer.load();
+            
+            // Show loading message
+            showMessage(`<i class="fas fa-video"></i> Loading ${videoName}...`, 'info');
+            
+            // Add error handling
+            videoPlayer.addEventListener('error', (e) => {
+                console.error('❌ Video loading error:', e);
+                console.error('Video error details:', videoPlayer.error);
+                showError(`<i class="fas fa-exclamation-triangle"></i> Error loading ${videoName}`);
+            });
+            
+            videoPlayer.addEventListener('loadeddata', () => {
+                console.log(`✅ Video loaded successfully in your player: ${videoName} in ${currentQuality}`);
+                showMessage(`<i class="fas fa-check"></i> Video ready to play in your player in ${currentQuality}`, 'success');
+                
+                // Configurar protección adicional cuando el video se carga
+                setupVideoProtection();
+            });
+        }
+        
+        // Función para configurar protección del iframe
+        function setupIframeProtection(iframe) {
+            console.log('🛡️ Configurando protección del iframe MEGA...');
+            
+            // Bloqueo del menú contextual en el iframe
+            iframe.oncontextmenu = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🚫 Menú contextual bloqueado en iframe MEGA');
+                return false;
+            };
+            
+            // Bloqueo adicional con múltiples eventos
+            ['contextmenu', 'mousedown', 'mouseup', 'click'].forEach(eventType => {
+                iframe.addEventListener(eventType, function(e) {
+                    if (e.button === 2) { // Botón derecho del mouse
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🚫 Botón derecho bloqueado en iframe MEGA');
+                        return false;
+                    }
+                });
+            });
+            
+            // Prevenir selección de texto
+            iframe.style.userSelect = 'none';
+            iframe.style.webkitUserSelect = 'none';
+            iframe.style.mozUserSelect = 'none';
+            iframe.style.msUserSelect = 'none';
+        }
+        
+        // Función específica para configurar protección del video
+        function setupVideoProtection() {
+            console.log('🛡️ Configurando protección específica del video...');
+            
+            // Bloqueo total del menú contextual en el video
+            videoPlayer.oncontextmenu = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🚫 Menú contextual bloqueado en video');
+                return false;
+            };
+            
+            // Bloqueo adicional con múltiples eventos
+            ['contextmenu', 'mousedown', 'mouseup', 'click'].forEach(eventType => {
+                videoPlayer.addEventListener(eventType, function(e) {
+                    if (e.button === 2) { // Botón derecho del mouse
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🚫 Botón derecho bloqueado en video');
+                        return false;
+                    }
+                }, true);
+            });
+            
+            // Deshabilitar arrastrar y soltar
+            videoPlayer.addEventListener('dragstart', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            videoPlayer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                return false;
+            });
+            
+            console.log('✅ Protección del video configurada');
+        }
+        
+        // Función para cargar video grande con redirección directa pero manteniendo interfaz
+        function loadVideoWithIframeInPlayer(videoUrl, videoName) {
+            console.log('🔄 Redirigiendo a Google Drive manteniendo interfaz...');
+            
+            // Mostrar mensaje de carga
+            showMessage(`<i class="fas fa-video"></i> Redirecting to ${videoName}...`, 'info');
+            
+            // Crear overlay con botón de regreso antes de redirigir
+            const overlay = document.createElement('div');
+            overlay.id = 'videoOverlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                color: white;
+                font-family: 'Inter', sans-serif;
+            `;
+            
+            overlay.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h2 style="margin-bottom: 20px;">
+                        <i class="fas fa-video" style="color: #007bff; margin-right: 10px;"></i>
+                        Loading ${videoName}...
+                    </h2>
+                    <p style="margin-bottom: 30px; color: #ccc;">
+                        Redirecting to Google Drive in 3 seconds...
+                    </p>
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        <button onclick="window.location.href = videoUrl" 
+                                style="background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                            <i class="fas fa-play"></i> Go to Video Now
+                        </button>
+                        <button onclick="showVideoList(); document.getElementById('videoOverlay').remove();" 
+                                style="background: #6c757d; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            
+            // Redirección automática después de 3 segundos
+            setTimeout(() => {
+                console.log('✅ Redirecting to Google Drive');
+                window.location.href = videoUrl;
+            }, 3000);
+        }
+        
+        // Función para mostrar lista de videos integrada en videoSelector
+        function showVideoList() {
+            const videoSelector = document.getElementById('videoSelector');
+            const videoPlayer = document.getElementById('videoPlayer');
+            
+            // Limpiar iframe y botón de regreso si existen
+            const existingIframe = document.getElementById('largeVideoFrame');
+            const existingBackButton = document.getElementById('backButton');
+            if (existingIframe) {
+                existingIframe.remove();
+            }
+            if (existingBackButton) {
+                existingBackButton.remove();
+            }
+            
+            // Mostrar el player normal
+            videoPlayer.style.display = 'block';
+            
+            // Limpiar el selector existente
+            videoSelector.innerHTML = '';
+            
+            // Crear botones de video usando el CSS existente
+            videoSelector.innerHTML = `
+                <button onclick="loadVideo('1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', 'DEEL 1.mp4')" 
+                        class="video-tab active">
+                    <i class="fas fa-play"></i> DEEL 1.mp4
+                </button>
+                <button onclick="loadVideo('1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE', 'DEEL 2.mp4')" 
+                        class="video-tab">
+                    <i class="fas fa-play"></i> DEEL 2.mp4
+                </button>
+            `;
+            
+            // Cargar el primer video por defecto
+            loadVideo('1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', 'DEEL 1.mp4');
+        }
+        // Función para cargar video grande - redirección directa sin iframe
+        function loadVideoWithIframe(videoUrl, videoName) {
+            console.log('🔄 Redirecting to video in same window...');
+            
+            // Mostrar mensaje de carga
+            showMessage(`<i class="fas fa-video"></i> Redirecting to ${videoName}...`, 'info');
+            
+            // Redirección directa en la misma ventana después de 2 segundos
+            setTimeout(() => {
+                console.log('✅ Redirecting to Google Drive');
+                window.location.href = videoUrl;
+            }, 2000);
+        }
+        
+        // Controles de video
+        function skipVideo(seconds) {
+            videoPlayer.currentTime += seconds;
+        }
+        
+        function toggleFullscreen() {
+            if (videoPlayer.requestFullscreen) {
+                videoPlayer.requestFullscreen();
+            } else if (videoPlayer.webkitRequestFullscreen) {
+                videoPlayer.webkitRequestFullscreen();
+            } else if (videoPlayer.msRequestFullscreen) {
+                videoPlayer.msRequestFullscreen();
+            }
+        }
+        
+        function toggleMute() {
+            videoPlayer.muted = !videoPlayer.muted;
+        }
+        
+        function setPlaybackRate(rate) {
+            videoPlayer.playbackRate = rate;
+        }
+        
+        // Toggle video quality
+        function toggleQuality() {
+            // Cambiar entre 4K y 1080p
+            currentQuality = currentQuality === '4K' ? '1080p' : '4K';
+            
+            // Actualizar el botón
+            document.getElementById('currentQuality').textContent = currentQuality;
+            
+            // Recargar el video con la nueva calidad
+            if (currentVideoId) {
+                const videoName = getVideoNameById(currentVideoId);
+                console.log(`🔄 Switching to ${currentQuality} quality for ${videoName}`);
+                loadVideo(currentVideoId, videoName);
+            }
+        }
+        
+        // Función auxiliar para obtener nombre del video por ID
+        function getVideoNameById(videoId) {
+            const videoMap = {
+                '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD': 'DEEL 1.mp4',
+                '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE': 'DEEL 2.mp4'
+            };
+            return videoMap[videoId] || 'Video';
+        }
+        
+        // Configurar atajos de teclado
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if (videoContainer.style.display === 'none') return;
+                
+                switch(e.code) {
+                    case 'Space':
+                        e.preventDefault();
+                        if (videoPlayer.paused) {
+                            videoPlayer.play();
+                        } else {
+                            videoPlayer.pause();
+                        }
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        skipVideo(-10);
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        skipVideo(10);
+                        break;
+                    case 'KeyF':
+                        e.preventDefault();
+                        toggleFullscreen();
+                        break;
+                    case 'KeyM':
+                        e.preventDefault();
+                        toggleMute();
+                        break;
+                }
+            });
+        }
+        
+        // Funciones de utilidad
+        function updateStatus(message, progress) {
+            document.querySelector('.status-message').textContent = message;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+        
+        function showError(message) {
+            messageContainer.innerHTML = `<div class="error-message">${message}</div>`;
+        }
+        
+        function showSuccess(message) {
+            messageContainer.innerHTML = `<div class="success-message">${message}</div>`;
+        }
+        
+        function showMessage(message, type = 'info') {
+            const className = type === 'error' ? 'error-message' : 'success-message';
+            messageContainer.innerHTML = `<div class="${className}">${message}</div>`;
+            
+            setTimeout(() => {
+                messageContainer.innerHTML = '';
+            }, 3000);
+        }
+        
+        // Eventos del video
+        videoPlayer.addEventListener('loadstart', () => {
+            showMessage('<i class="fas fa-spinner fa-spin"></i> Loading video...', 'info');
+        });
+        
+        videoPlayer.addEventListener('canplay', () => {
+            showMessage('<i class="fas fa-check"></i> Video ready to play', 'success');
+        });
+        
+        videoPlayer.addEventListener('error', () => {
+            showError('<i class="fas fa-exclamation-triangle"></i> Error loading video');
+        });
+        
+        // Función para inicializar controles personalizados
+        function initializeCustomControls(iframe, videoWrapper) {
+            console.log('🎮 Inicializando controles personalizados...');
+            
+            // Obtener elementos de control
+            const playPauseBtn = videoWrapper.querySelector('#playPauseBtn');
+            const playIcon = videoWrapper.querySelector('#playIcon');
+            const playText = videoWrapper.querySelector('#playText');
+            const volumeSlider = videoWrapper.querySelector('#volumeSlider');
+            const volumeText = videoWrapper.querySelector('#volumeText');
+            const volumeIcon = videoWrapper.querySelector('#volumeIcon');
+            const qualitySelector = videoWrapper.querySelector('#qualitySelector');
+            const fullscreenBtn = videoWrapper.querySelector('#fullscreenBtn');
+            const progressBar = videoWrapper.querySelector('#progressBar');
+            const progressFill = videoWrapper.querySelector('#progressFill');
+            const timeDisplay = videoWrapper.querySelector('#timeDisplay');
+            
+            let isPlaying = false;
+            let currentTime = 0;
+            let duration = 0;
+            let volume = 100;
+            
+            // Función para enviar comandos al iframe de Vimeo
+            function sendVimeoCommand(command, value = null) {
+                try {
+                    iframe.contentWindow.postMessage({
+                        method: command,
+                        value: value
+                    }, '*');
+                } catch (error) {
+                    console.log('⚠️ No se puede comunicar con el iframe de Vimeo:', error);
+                }
+            }
+            
+            // Control de Play/Pause
+            playPauseBtn.addEventListener('click', () => {
+                if (isPlaying) {
+                    sendVimeoCommand('pause');
+                    playIcon.className = 'fas fa-play';
+                    playText.textContent = 'Play';
+                    isPlaying = false;
+                } else {
+                    sendVimeoCommand('play');
+                    playIcon.className = 'fas fa-pause';
+                    playText.textContent = 'Pause';
+                    isPlaying = true;
+                }
+            });
+            
+            // Control de volumen
+            volumeSlider.addEventListener('input', (e) => {
+                volume = e.target.value;
+                volumeText.textContent = volume + '%';
+                
+                // Actualizar icono de volumen
+                if (volume == 0) {
+                    volumeIcon.className = 'fas fa-volume-mute';
+                } else if (volume < 50) {
+                    volumeIcon.className = 'fas fa-volume-down';
+                } else {
+                    volumeIcon.className = 'fas fa-volume-up';
+                }
+                
+                sendVimeoCommand('setVolume', volume / 100);
+            });
+            
+            // Control de calidad
+            qualitySelector.addEventListener('change', (e) => {
+                const quality = e.target.value;
+                console.log('🎬 Cambiando calidad a:', quality);
+                showMessage(`<i class="fas fa-cog"></i> Cambiando a ${quality}...`, 'info');
+                
+                // Nota: Vimeo maneja la calidad automáticamente
+                // Este selector es principalmente informativo
+            });
+            
+            // Control de pantalla completa
+            fullscreenBtn.addEventListener('click', () => {
+                if (videoWrapper.requestFullscreen) {
+                    videoWrapper.requestFullscreen();
+                } else if (videoWrapper.webkitRequestFullscreen) {
+                    videoWrapper.webkitRequestFullscreen();
+                } else if (videoWrapper.msRequestFullscreen) {
+                    videoWrapper.msRequestFullscreen();
+                }
+            });
+            
+            // Control de progreso
+            progressBar.addEventListener('click', (e) => {
+                const rect = progressBar.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const percentage = clickX / rect.width;
+                const newTime = percentage * duration;
+                
+                sendVimeoCommand('setCurrentTime', newTime);
+            });
+            
+            // Simular actualización de tiempo (ya que no podemos acceder directamente al iframe)
+            let progressInterval = setInterval(() => {
+                if (isPlaying) {
+                    currentTime += 1;
+                    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+                    progressFill.style.width = progress + '%';
+                    
+                    // Actualizar display de tiempo
+                    const currentMinutes = Math.floor(currentTime / 60);
+                    const currentSeconds = Math.floor(currentTime % 60);
+                    const durationMinutes = Math.floor(duration / 60);
+                    const durationSeconds = Math.floor(duration % 60);
+                    
+                    timeDisplay.textContent = 
+                        `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ` +
+                        `${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+            
+            // Simular duración del video (en segundos)
+            duration = 3600; // 1 hora como ejemplo
+            
+            // Detener intervalo cuando se cambie de video
+            videoWrapper.addEventListener('beforeunload', () => {
+                clearInterval(progressInterval);
+            });
+            
+            console.log('✅ Controles personalizados inicializados');
+        }
+    </script>
+</body>
+</html>
