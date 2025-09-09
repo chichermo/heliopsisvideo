@@ -1,4 +1,4 @@
-const { db } = require('./database/init');
+const { db } = require('./init');
 
 // Script que se ejecuta automáticamente al iniciar el servidor
 function initializeTokensTable() {
