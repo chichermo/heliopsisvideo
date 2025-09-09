@@ -1071,9 +1071,12 @@
             // Mostrar el elemento video
             videoPlayer.style.display = 'block';
             
-            // Limpiar el contenedor de iframe si existe
+            // Limpiar solo el área del video, no los botones de selección
             const videoContainer = document.getElementById('videoContainer');
-            videoContainer.innerHTML = '';
+            const existingVideoWrapper = videoContainer.querySelector('.video-wrapper');
+            if (existingVideoWrapper) {
+                existingVideoWrapper.remove();
+            }
             
             // Crear iframe para Vimeo
             const vimeoUrl = `/api/vimeo/stream/${videoId}`;
@@ -1176,9 +1179,12 @@
             // Mostrar el elemento video
             videoPlayer.style.display = 'block';
             
-            // Limpiar el contenedor de iframe
+            // Limpiar solo el área del video, no los botones de selección
             const videoContainer = document.getElementById('videoContainer');
-            videoContainer.innerHTML = '';
+            const existingVideoWrapper = videoContainer.querySelector('.video-wrapper');
+            if (existingVideoWrapper) {
+                existingVideoWrapper.remove();
+            }
             
             // Usar el elemento video para streaming directo
             videoPlayer.src = videoUrl;
