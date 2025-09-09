@@ -1082,9 +1082,24 @@
             const vimeoUrl = `/api/vimeo/stream/${videoId}`;
             console.log(`🔗 Vimeo URL: ${vimeoUrl}`);
             
-            // Crear iframe para Vimeo con controles nativos y sin logo
+            // Mapear video IDs a Vimeo video IDs
+            const vimeoVideoIds = {
+                '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD': '1116840023', // DEEL 1 - Video ID real de Vimeo
+                '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE': '1116863299'  // DEEL 2 - Video ID real de Vimeo
+            };
+            
+            const vimeoId = vimeoVideoIds[videoId];
+            if (!vimeoId) {
+                console.error('❌ Video ID no encontrado:', videoId);
+                showMessage('Video not found', 'error');
+                return;
+            }
+            
+            console.log(`🎥 Usando Vimeo ID: ${vimeoId} para video: ${videoId}`);
+            
+            // Crear iframe directo de Vimeo para evitar problemas de embedding
             const iframe = document.createElement('iframe');
-            iframe.src = vimeoUrl;
+            iframe.src = `https://player.vimeo.com/video/${vimeoId}?autoplay=0&controls=1&title=0&byline=0&portrait=0&badge=0&keyboard=1&muted=0&loop=0&quality=auto&responsive=1`;
             iframe.style.cssText = `
                 width: 100%;
                 height: 100%;
@@ -1144,7 +1159,7 @@
                 
                 // Agregar botón de prueba
                 const testButton = document.createElement('button');
-                testButton.textContent = '🔗 Abrir Video Directamente';
+                testButton.textContent = '🔗 Open Video Directly';
                 testButton.style.cssText = `
                     position: absolute;
                     top: 10px;
@@ -1592,8 +1607,8 @@
             
             // Control de Play/Pause (solo informativo)
             playPauseBtn.addEventListener('click', () => {
-                console.log('🎮 Botón Play/Pause presionado - Usa los controles de Vimeo');
-                showMessage('Usa los controles del reproductor de Vimeo', 'info');
+                console.log('🎮 Play/Pause button pressed - Use Vimeo controls');
+                showMessage('Use the Vimeo player controls', 'info');
             });
             
             // Control de volumen (solo informativo)
