@@ -1128,6 +1128,42 @@
             iframe.onload = () => {
                 console.log('✅ Video cargado exitosamente');
                 showMessage(`<i class="fas fa-check"></i> Video ready to play`, 'success');
+                
+                // Verificar que el iframe esté visible
+                console.log('🔍 Verificando visibilidad del iframe...');
+                console.log('📏 Dimensiones del iframe:', {
+                    width: iframe.offsetWidth,
+                    height: iframe.offsetHeight,
+                    display: window.getComputedStyle(iframe).display,
+                    visibility: window.getComputedStyle(iframe).visibility
+                });
+                
+                // Agregar botón de prueba
+                const testButton = document.createElement('button');
+                testButton.textContent = '🔗 Abrir Video Directamente';
+                testButton.style.cssText = `
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    background: #ff6b6b;
+                    color: white;
+                    border: none;
+                    padding: 10px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    z-index: 1000;
+                `;
+                testButton.onclick = () => {
+                    window.open(vimeoUrl, '_blank');
+                };
+                videoWrapper.appendChild(testButton);
+                
+                // Forzar redimensionamiento
+                setTimeout(() => {
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    console.log('🔄 Iframe redimensionado');
+                }, 1000);
             };
         }
         
