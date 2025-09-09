@@ -173,6 +173,11 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+// Ruta para el panel de administración simple
+app.get('/admin-simple', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-simple.html'));
+});
+
 // Ruta para ver videos con token
 app.get('/watch/:token', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'player.html'));
