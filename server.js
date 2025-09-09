@@ -57,8 +57,7 @@ initDatabase();
 const { initializeTokensTable } = require('./database/auto-init-tokens');
 const { createAutomaticBackup, restoreFromLatestBackup } = require('./database/backup-manager');
 
-// Script para migración forzada de todos los tokens
-const forceMigrateAllTokens = require('./force-migrate-all-tokens');
+// Script para migración forzada de todos los tokens (se ejecutará si es necesario)
 
 setTimeout(async () => {
     // Primero intentar restaurar desde backup
