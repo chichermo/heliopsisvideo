@@ -1129,7 +1129,21 @@
                 margin: 20px 0;
             `;
             
+            // Crear overlay para ocultar logo de Vimeo
+            const logoOverlay = document.createElement('div');
+            logoOverlay.style.cssText = `
+                position: absolute;
+                bottom: 0;
+                right: 0;
+                width: 60px;
+                height: 20px;
+                background: #000;
+                z-index: 10;
+                pointer-events: none;
+            `;
+            
             videoWrapper.appendChild(iframe);
+            videoWrapper.appendChild(logoOverlay);
             
             // Ocultar el elemento video y mostrar el wrapper del video
             videoPlayer.style.display = 'none';
@@ -1157,25 +1171,6 @@
                     visibility: window.getComputedStyle(iframe).visibility
                 });
                 
-                // Agregar botón de prueba
-                const testButton = document.createElement('button');
-                testButton.textContent = '🔗 Open Video Directly';
-                testButton.style.cssText = `
-                    position: absolute;
-                    top: 10px;
-                    right: 10px;
-                    background: #ff6b6b;
-                    color: white;
-                    border: none;
-                    padding: 10px;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    z-index: 1000;
-                `;
-                testButton.onclick = () => {
-                    window.open(vimeoUrl, '_blank');
-                };
-                videoWrapper.appendChild(testButton);
                 
                 // Forzar redimensionamiento
                 setTimeout(() => {
