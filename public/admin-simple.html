@@ -1095,14 +1095,24 @@
             { email: 'Carole.scrivens@gmail.com', token: '047993c360a8e0258e7b895d2ca62c77', password: 'naEmwyBH', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] }
         ];
         
-        // Cargar todos los tokens para gestión (ahora usa lista hardcodeada)
+        // Función para obtener todos los tokens (hardcodeados + nuevos)
+        function getAllTokens() {
+            // Obtener tokens nuevos del localStorage
+            const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+            
+            // Combinar tokens hardcodeados con tokens nuevos
+            return [...hardcodedTokens, ...newTokens];
+        }
+        
+        // Cargar todos los tokens para gestión (ahora usa lista hardcodeada + localStorage)
         function loadAllTokens() {
             const tokensList = document.getElementById('tokensList');
             tokensList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading tokens...</p></div>';
             
             // Simular carga rápida
             setTimeout(() => {
-                displayTokens(hardcodedTokens);
+                const allTokens = getAllTokens();
+                displayTokens(allTokens);
             }, 500);
         }
         
@@ -1120,9 +1130,20 @@
                 video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE']
             };
             
-            hardcodedTokens.push(newToken);
-            displayTokens(hardcodedTokens);
-            console.log('✅ Nuevo token agregado:', newToken);
+            // Obtener tokens existentes del localStorage
+            const existingTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+            
+            // Agregar nuevo token
+            existingTokens.push(newToken);
+            
+            // Guardar en localStorage
+            localStorage.setItem('newTokens', JSON.stringify(existingTokens));
+            
+            // Actualizar la vista
+            const allTokens = getAllTokens();
+            displayTokens(allTokens);
+            
+            console.log('✅ Nuevo token agregado y guardado:', newToken);
         }
         
         // Mostrar tokens en la interfaz
