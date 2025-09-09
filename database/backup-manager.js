@@ -2,7 +2,7 @@ const { db } = require('./init');
 const fs = require('fs');
 const path = require('path');
 
-// Script de respaldo automático de tokens
+// Sistema de backup automático para tokens
 class TokenBackupManager {
     constructor() {
         this.backupDir = path.join(__dirname, 'backups');
@@ -12,238 +12,206 @@ class TokenBackupManager {
     ensureBackupDir() {
         if (!fs.existsSync(this.backupDir)) {
             fs.mkdirSync(this.backupDir, { recursive: true });
-            console.log('📁 Directorio de respaldos creado:', this.backupDir);
+            console.log('📁 Directorio de backup creado');
         }
     }
     
-    // Crear respaldo completo
-    async createFullBackup() {
-        console.log('🔄 Creando respaldo completo...');
-        
-        try {
-            // Obtener todos los tokens
-            const tokens = await this.getAllTokens();
-            
-            // Crear respaldo en JSON
-            await this.createJSONBackup(tokens);
-            
-            // Crear respaldo en CSV
-            await this.createCSVBackup(tokens);
-            
-            // Crear respaldo de base de datos
-            await this.createDatabaseBackup();
-            
-            // Crear respaldo de código (tokens hardcodeados)
-            await this.createCodeBackup(tokens);
-            
-            console.log('✅ Respaldo completo creado exitosamente');
-            
-        } catch (error) {
-            console.error('❌ Error creando respaldo:', error);
-        }
-    }
-    
-    async getAllTokens() {
+    // Crear backup de todos los tokens
+    async createBackup() {
         return new Promise((resolve, reject) => {
-            db.all("SELECT * FROM simple_tokens ORDER BY created_at DESC", [], (err, tokens) => {
+            const query = `SELECT * FROM simple_tokens ORDER BY created_at DESC`;
+            
+            db.all(query, [], (err, rows) => {
                 if (err) {
+                    console.error('❌ Error creando backup:', err);
                     reject(err);
-                } else {
-                    resolve(tokens);
+                    return;
+                }
+                
+                const backup = {
+                    timestamp: new Date().toISOString(),
+                    count: rows.length,
+                    tokens: rows.map(row => ({
+                        token: row.token,
+                        email: row.email,
+                        password: row.password,
+                        video_ids: row.video_ids,
+                        views: row.views,
+                        max_views: row.max_views,
+                        is_permanent: row.is_permanent,
+                        requires_password: row.requires_password,
+                        status: row.status,
+                        is_active: row.is_active,
+                        notes: row.notes,
+                        payment_status: row.payment_status,
+                        created_at: row.created_at,
+                        last_accessed: row.last_accessed
+                    }))
+                };
+                
+                const filename = `tokens_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+                const filepath = path.join(this.backupDir, filename);
+                
+                fs.writeFile(filepath, JSON.stringify(backup, null, 2), (err) => {
+                    if (err) {
+                        console.error('❌ Error guardando backup:', err);
+                        reject(err);
+                        return;
+                    }
+                    
+                    console.log(`✅ Backup creado: ${filename} (${rows.length} tokens)`);
+                    resolve(filepath);
+                });
+            });
+        });
+    }
+    
+    // Restaurar tokens desde backup
+    async restoreFromBackup(filepath) {
+        return new Promise((resolve, reject) => {
+            fs.readFile(filepath, 'utf8', (err, data) => {
+                if (err) {
+                    console.error('❌ Error leyendo backup:', err);
+                    reject(err);
+                    return;
+                }
+                
+                try {
+                    const backup = JSON.parse(data);
+                    console.log(`🔄 Restaurando ${backup.count} tokens desde backup...`);
+                    
+                    let restored = 0;
+                    let errors = 0;
+                    
+                    backup.tokens.forEach((tokenData, index) => {
+                        const insertSQL = `
+                            INSERT OR REPLACE INTO simple_tokens 
+                            (token, email, password, video_ids, views, max_views, is_permanent, 
+                             requires_password, status, is_active, notes, payment_status, 
+                             created_at, last_accessed)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        `;
+                        
+                        db.run(insertSQL, [
+                            tokenData.token,
+                            tokenData.email,
+                            tokenData.password,
+                            tokenData.video_ids,
+                            tokenData.views,
+                            tokenData.max_views,
+                            tokenData.is_permanent,
+                            tokenData.requires_password,
+                            tokenData.status,
+                            tokenData.is_active,
+                            tokenData.notes,
+                            tokenData.payment_status,
+                            tokenData.created_at,
+                            tokenData.last_accessed
+                        ], (err) => {
+                            if (err) {
+                                console.error(`❌ Error restaurando token ${tokenData.token}:`, err);
+                                errors++;
+                            } else {
+                                restored++;
+                            }
+                            
+                            if (restored + errors === backup.tokens.length) {
+                                console.log(`✅ Restauración completada: ${restored} tokens restaurados, ${errors} errores`);
+                                resolve({ restored, errors });
+                            }
+                        });
+                    });
+                    
+                } catch (parseError) {
+                    console.error('❌ Error parseando backup:', parseError);
+                    reject(parseError);
                 }
             });
         });
     }
     
-    async createJSONBackup(tokens) {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const backupFile = path.join(this.backupDir, `tokens-backup-${timestamp}.json`);
-        
-        const backupData = {
-            timestamp: new Date().toISOString(),
-            total_tokens: tokens.length,
-            backup_type: 'full_backup',
-            tokens: tokens.map(token => ({
-                token: token.token,
-                email: token.email,
-                video_ids: JSON.parse(token.video_ids),
-                password: token.password,
-                views: token.views,
-                max_views: token.max_views,
-                is_permanent: token.is_permanent === 1,
-                requires_password: token.requires_password === 1,
-                status: token.status,
-                created_at: token.created_at,
-                last_used: token.last_used
-            }))
-        };
-        
-        fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
-        console.log(`✅ Respaldo JSON creado: ${path.basename(backupFile)}`);
-        
-        // Mantener solo los últimos 10 respaldos JSON
-        this.cleanupOldBackups('tokens-backup-', '.json', 10);
-    }
-    
-    async createCSVBackup(tokens) {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const csvFile = path.join(this.backupDir, `tokens-backup-${timestamp}.csv`);
-        
-        let csvContent = 'token,email,password,video_ids,views,max_views,is_permanent,requires_password,status,created_at,last_used\n';
-        
-        tokens.forEach(token => {
-            csvContent += `${token.token},${token.email},${token.password},"${token.video_ids}",${token.views},${token.max_views},${token.is_permanent},${token.requires_password},${token.status},${token.created_at},${token.last_used}\n`;
-        });
-        
-        fs.writeFileSync(csvFile, csvContent);
-        console.log(`✅ Respaldo CSV creado: ${path.basename(csvFile)}`);
-        
-        // Mantener solo los últimos 10 respaldos CSV
-        this.cleanupOldBackups('tokens-backup-', '.csv', 10);
-    }
-    
-    async createDatabaseBackup() {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const dbBackupFile = path.join(this.backupDir, `database-backup-${timestamp}.db`);
-        
-        const sourceDb = path.join(__dirname, 'access_tokens.db');
-        if (fs.existsSync(sourceDb)) {
-            fs.copyFileSync(sourceDb, dbBackupFile);
-            console.log(`✅ Respaldo de base de datos creado: ${path.basename(dbBackupFile)}`);
-            
-            // Mantener solo los últimos 5 respaldos de DB
-            this.cleanupOldBackups('database-backup-', '.db', 5);
-        }
-    }
-    
-    async createCodeBackup(tokens) {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const codeFile = path.join(this.backupDir, `emergency-tokens-${timestamp}.js`);
-        
-        let codeContent = `// Respaldo de tokens de emergencia - ${new Date().toISOString()}
-// Total de tokens: ${tokens.length}
-
-const emergencyTokens = {
-`;
-
-        tokens.forEach((token, index) => {
-            const videoIds = JSON.parse(token.video_ids);
-            codeContent += `    '${token.token}': {
-        email: '${token.email}',
-        password: '${token.password}',
-        video_ids: ${JSON.stringify(videoIds)},
-        views: ${token.views},
-        max_views: ${token.max_views},
-        is_permanent: ${token.is_permanent === 1},
-        requires_password: ${token.requires_password === 1},
-        status: '${token.status}'
-    }`;
-            
-            if (index < tokens.length - 1) {
-                codeContent += ',\n';
-            } else {
-                codeContent += '\n';
-            }
-        });
-        
-        codeContent += `};
-
-module.exports = { emergencyTokens };
-`;
-
-        fs.writeFileSync(codeFile, codeContent);
-        console.log(`✅ Respaldo de código creado: ${path.basename(codeFile)}`);
-        
-        // Mantener solo los últimos 5 respaldos de código
-        this.cleanupOldBackups('emergency-tokens-', '.js', 5);
-    }
-    
-    cleanupOldBackups(prefix, extension, keepCount) {
+    // Obtener lista de backups disponibles
+    getAvailableBackups() {
         try {
             const files = fs.readdirSync(this.backupDir)
-                .filter(file => file.startsWith(prefix) && file.endsWith(extension))
-                .sort()
-                .reverse();
+                .filter(file => file.startsWith('tokens_backup_') && file.endsWith('.json'))
+                .map(file => {
+                    const filepath = path.join(this.backupDir, file);
+                    const stats = fs.statSync(filepath);
+                    return {
+                        filename: file,
+                        filepath: filepath,
+                        size: stats.size,
+                        created: stats.birthtime,
+                        modified: stats.mtime
+                    };
+                })
+                .sort((a, b) => b.modified - a.modified);
             
-            if (files.length > keepCount) {
-                const filesToDelete = files.slice(keepCount);
-                filesToDelete.forEach(file => {
-                    fs.unlinkSync(path.join(this.backupDir, file));
-                    console.log(`🗑️ Respaldo antiguo eliminado: ${file}`);
-                });
-            }
+            return files;
         } catch (error) {
-            console.error('❌ Error limpiando respaldos antiguos:', error);
+            console.error('❌ Error obteniendo backups:', error);
+            return [];
         }
     }
     
-    // Restaurar desde respaldo
-    async restoreFromBackup(backupFile) {
-        console.log(`🔄 Restaurando desde respaldo: ${backupFile}`);
+    // Limpiar backups antiguos (mantener solo los últimos 10)
+    async cleanupOldBackups() {
+        const backups = this.getAvailableBackups();
         
-        try {
-            const backupData = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
-            console.log(`📊 Respaldo contiene ${backupData.total_tokens} tokens`);
+        if (backups.length > 10) {
+            const toDelete = backups.slice(10);
             
-            // Aquí podrías implementar la lógica de restauración
-            console.log('✅ Restauración completada');
-            
-        } catch (error) {
-            console.error('❌ Error restaurando respaldo:', error);
+            toDelete.forEach(backup => {
+                try {
+                    fs.unlinkSync(backup.filepath);
+                    console.log(`🗑️ Backup eliminado: ${backup.filename}`);
+                } catch (error) {
+                    console.error(`❌ Error eliminando backup ${backup.filename}:`, error);
+                }
+            });
         }
     }
-    
-    // Listar respaldos disponibles
-    listBackups() {
-        console.log('📋 Respaldos disponibles:');
-        
-        const files = fs.readdirSync(this.backupDir);
-        const jsonBackups = files.filter(f => f.startsWith('tokens-backup-') && f.endsWith('.json'));
-        const csvBackups = files.filter(f => f.startsWith('tokens-backup-') && f.endsWith('.csv'));
-        const dbBackups = files.filter(f => f.startsWith('database-backup-') && f.endsWith('.db'));
-        const codeBackups = files.filter(f => f.startsWith('emergency-tokens-') && f.endsWith('.js'));
-        
-        console.log(`  📄 JSON: ${jsonBackups.length} archivos`);
-        console.log(`  📊 CSV: ${csvBackups.length} archivos`);
-        console.log(`  🗄️ DB: ${dbBackups.length} archivos`);
-        console.log(`  💻 Código: ${codeBackups.length} archivos`);
-        
-        return {
-            json: jsonBackups,
-            csv: csvBackups,
-            db: dbBackups,
-            code: codeBackups
-        };
+}
+
+// Crear instancia global
+const backupManager = new TokenBackupManager();
+
+// Función para crear backup automático
+async function createAutomaticBackup() {
+    try {
+        await backupManager.createBackup();
+        await backupManager.cleanupOldBackups();
+    } catch (error) {
+        console.error('❌ Error en backup automático:', error);
     }
 }
 
-// Función principal
-async function main() {
-    const backupManager = new TokenBackupManager();
-    
-    // Crear respaldo completo
-    await backupManager.createFullBackup();
-    
-    // Listar respaldos
-    backupManager.listBackups();
-    
-    // Cerrar conexión
-    setTimeout(() => {
-        db.close((err) => {
-            if (err) {
-                console.error('❌ Error cerrando base de datos:', err);
-            } else {
-                console.log('✅ Conexión a base de datos cerrada');
-            }
-            process.exit(0);
-        });
-    }, 2000);
+// Función para restaurar desde el backup más reciente
+async function restoreFromLatestBackup() {
+    try {
+        const backups = backupManager.getAvailableBackups();
+        
+        if (backups.length === 0) {
+            console.log('⚠️ No hay backups disponibles');
+            return false;
+        }
+        
+        const latestBackup = backups[0];
+        console.log(`🔄 Restaurando desde backup más reciente: ${latestBackup.filename}`);
+        
+        await backupManager.restoreFromBackup(latestBackup.filepath);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error restaurando desde backup:', error);
+        return false;
+    }
 }
 
-// Exportar clase
-module.exports = TokenBackupManager;
-
-// Si se ejecuta directamente
-if (require.main === module) {
-    main();
-}
+module.exports = {
+    TokenBackupManager,
+    backupManager,
+    createAutomaticBackup,
+    restoreFromLatestBackup
+};

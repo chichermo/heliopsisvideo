@@ -1096,6 +1096,42 @@
                 
                 // Inicializar controles personalizados
                 initializeCustomControls(iframe, videoWrapper);
+                
+                // Escuchar mensajes del iframe de Vimeo
+                window.addEventListener('message', (event) => {
+                    if (event.origin !== 'https://player.vimeo.com' && event.origin !== window.location.origin) {
+                        return;
+                    }
+                    
+                    const data = event.data;
+                    console.log('📨 Mensaje recibido de Vimeo:', data);
+                    
+                    switch (data.event) {
+                        case 'ready':
+                            console.log('🎬 Vimeo player listo');
+                            break;
+                        case 'play':
+                            isPlaying = true;
+                            playIcon.className = 'fas fa-pause';
+                            playText.textContent = 'Pause';
+                            break;
+                        case 'pause':
+                            isPlaying = false;
+                            playIcon.className = 'fas fa-play';
+                            playText.textContent = 'Play';
+                            break;
+                        case 'timeupdate':
+                            currentTime = data.data.seconds;
+                            duration = data.data.duration;
+                            updateProgressBar();
+                            break;
+                        case 'volumechange':
+                            volume = data.data.volume * 100;
+                            volumeSlider.value = volume;
+                            volumeText.textContent = Math.round(volume) + '%';
+                            break;
+                    }
+                });
             };
         }
         
@@ -1460,17 +1496,27 @@
                     if (value !== null) {
                         message.value = value;
                     }
-                    // Usar '*' como origen para evitar errores de CORS
-                    iframe.contentWindow.postMessage(message, '*');
                     
-                    // También intentar con el origen específico de Vimeo
-                    setTimeout(() => {
-                        try {
-                            iframe.contentWindow.postMessage(message, 'https://player.vimeo.com');
-                        } catch (e) {
-                            console.log('⚠️ Fallback postMessage también falló');
-                        }
-                    }, 100);
+                    // Intentar múltiples métodos de comunicación
+                    try {
+                        iframe.contentWindow.postMessage(message, '*');
+                    } catch (e) {
+                        console.log('⚠️ PostMessage con * falló');
+                    }
+                    
+                    try {
+                        iframe.contentWindow.postMessage(message, 'https://player.vimeo.com');
+                    } catch (e) {
+                        console.log('⚠️ PostMessage con Vimeo origin falló');
+                    }
+                    
+                    // Intentar con el origen del iframe
+                    try {
+                        iframe.contentWindow.postMessage(message, iframe.src);
+                    } catch (e) {
+                        console.log('⚠️ PostMessage con iframe src falló');
+                    }
+                    
                 } catch (error) {
                     console.log('⚠️ No se puede comunicar con el iframe de Vimeo:', error);
                 }
@@ -1507,6 +1553,23 @@
                 
                 sendVimeoCommand('setVolume', volume / 100);
             });
+            
+            // Función para actualizar la barra de progreso
+            function updateProgressBar() {
+                if (duration > 0) {
+                    const progress = (currentTime / duration) * 100;
+                    progressFill.style.width = progress + '%';
+                    
+                    // Actualizar tiempo
+                    const currentMinutes = Math.floor(currentTime / 60);
+                    const currentSeconds = Math.floor(currentTime % 60);
+                    const durationMinutes = Math.floor(duration / 60);
+                    const durationSeconds = Math.floor(duration % 60);
+                    
+                    timeDisplay.textContent = 
+                        `${currentMinutes}:${currentSeconds.toString().padStart(2, '0')} / ${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}`;
+                }
+            }
             
             // Control de calidad
             qualitySelector.addEventListener('change', (e) => {

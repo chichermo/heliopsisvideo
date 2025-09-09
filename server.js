@@ -55,8 +55,21 @@ initDatabase();
 
 // Inicializar tabla de tokens automáticamente
 const { initializeTokensTable } = require('./database/auto-init-tokens');
-setTimeout(() => {
-    initializeTokensTable();
+const { createAutomaticBackup, restoreFromLatestBackup } = require('./database/backup-manager');
+
+setTimeout(async () => {
+    // Primero intentar restaurar desde backup
+    const restored = await restoreFromLatestBackup();
+    
+    if (!restored) {
+        // Si no hay backup, inicializar tabla normalmente
+        initializeTokensTable();
+    }
+    
+    // Crear backup inicial
+    setTimeout(async () => {
+        await createAutomaticBackup();
+    }, 5000);
 }, 2000); // Esperar 2 segundos para que la base de datos se inicialice
 
 // Rutas de la API
@@ -276,6 +289,11 @@ app.post('/api/restore-exact-tokens', async (req, res) => {
             }
         }
         
+        // Crear backup después de restaurar tokens
+        setTimeout(async () => {
+            await createAutomaticBackup();
+        }, 2000);
+        
         res.json({
             success: true,
             message: `Tokens restaurados: ${insertedCount} exitosos, ${errorCount} errores`,
@@ -289,6 +307,50 @@ app.post('/api/restore-exact-tokens', async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Error restaurando tokens',
+            message: error.message
+        });
+    }
+});
+
+// Endpoint para crear backup manual
+app.post('/api/create-backup', async (req, res) => {
+    try {
+        const filepath = await createAutomaticBackup();
+        res.json({
+            success: true,
+            message: 'Backup creado exitosamente',
+            filepath: filepath
+        });
+    } catch (error) {
+        console.error('❌ Error creando backup:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error creando backup',
+            message: error.message
+        });
+    }
+});
+
+// Endpoint para listar backups disponibles
+app.get('/api/list-backups', (req, res) => {
+    try {
+        const { backupManager } = require('./database/backup-manager');
+        const backups = backupManager.getAvailableBackups();
+        
+        res.json({
+            success: true,
+            backups: backups.map(backup => ({
+                filename: backup.filename,
+                size: backup.size,
+                created: backup.created,
+                modified: backup.modified
+            }))
+        });
+    } catch (error) {
+        console.error('❌ Error listando backups:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error listando backups',
             message: error.message
         });
     }
