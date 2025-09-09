@@ -756,50 +756,100 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
 // Ruta para listar todos los tokens (administración)
 router.get('/list-simple', async (req, res) => {
     try {
-        const query = `
-            SELECT 
-                id, token, email, password, video_ids, 
-                created_at, views, max_views, is_active, 
-                last_accessed, notes, payment_status
-            FROM simple_tokens 
-            ORDER BY created_at DESC
-        `;
+        console.log('🔍 Consultando tokens para el panel de administración...');
         
-        db.all(query, [], (err, rows) => {
+        // Primero verificar si la tabla existe
+        db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='simple_tokens'", [], (err, table) => {
             if (err) {
-                console.error('Error listando tokens:', err);
+                console.error('❌ Error verificando tabla:', err);
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Error listing tokens' 
+                    error: 'Error verificando tabla' 
                 });
             }
             
-            res.json({
-                success: true,
-                data: rows.map(row => ({
-                    id: row.id,
-                    token: row.token,
-                    email: row.email,
-                    password: row.password,
-                    video_ids: row.video_ids.split(','),
-                    created_at: row.created_at,
-                    views: row.views,
-                    max_views: row.max_views,
-                    is_active: row.is_active === 1,
-                    last_accessed: row.last_accessed,
-                    notes: row.notes,
-                    payment_status: row.payment_status,
-                    is_permanent: row.max_views >= 999999,
-                    access_link: `${req.protocol}://${req.get('host')}/watch-simple/${row.token}`
-                }))
+            if (!table) {
+                console.log('❌ La tabla simple_tokens no existe');
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Tabla simple_tokens no existe' 
+                });
+            }
+            
+            console.log('✅ Tabla simple_tokens existe');
+            
+            // Consulta simple primero
+            const simpleQuery = `SELECT COUNT(*) as count FROM simple_tokens`;
+            db.get(simpleQuery, [], (err, result) => {
+                if (err) {
+                    console.error('❌ Error contando tokens:', err);
+                    return res.status(500).json({ 
+                        success: false, 
+                        error: 'Error contando tokens' 
+                    });
+                }
+                
+                console.log(`📊 Total de tokens en la base de datos: ${result.count}`);
+                
+                if (result.count === 0) {
+                    console.log('⚠️ No hay tokens en la tabla');
+                    return res.json({
+                        success: true,
+                        data: [],
+                        message: 'No hay tokens en la base de datos'
+                    });
+                }
+                
+                // Consulta completa
+                const query = `
+                    SELECT 
+                        id, token, email, password, video_ids, 
+                        created_at, views, max_views, is_active, 
+                        last_accessed, notes, payment_status
+                    FROM simple_tokens 
+                    ORDER BY created_at DESC
+                `;
+                
+                db.all(query, [], (err, rows) => {
+                    if (err) {
+                        console.error('❌ Error en consulta completa:', err);
+                        return res.status(500).json({ 
+                            success: false, 
+                            error: 'Error en consulta completa' 
+                        });
+                    }
+                    
+                    console.log(`✅ Consulta exitosa: ${rows.length} tokens encontrados`);
+                    
+                    res.json({
+                        success: true,
+                        data: rows.map(row => ({
+                            id: row.id,
+                            token: row.token,
+                            email: row.email,
+                            password: row.password,
+                            video_ids: row.video_ids ? row.video_ids.split(',') : [],
+                            views: row.views || 0,
+                            max_views: row.max_views || 999999,
+                            is_active: row.is_active === 1,
+                            last_accessed: row.last_accessed || row.created_at,
+                            notes: row.notes || 'Token permanente',
+                            payment_status: row.payment_status || 'completed',
+                            is_permanent: (row.max_views || 999999) >= 999999,
+                            access_link: `${req.protocol}://${req.get('host')}/watch-simple/${row.token}`,
+                            created_at: row.created_at
+                        }))
+                    });
+                });
             });
         });
         
     } catch (error) {
-        console.error('Error listando tokens:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Internal server error' 
+        console.error('❌ Error general en list-simple:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            message: error.message
         });
     }
 });
