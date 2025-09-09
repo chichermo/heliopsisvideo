@@ -378,33 +378,6 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        .video-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .control-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
-        
-        .control-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-        
-        .control-btn:active {
-            transform: translateY(0);
-        }
         
         .video-selector {
             display: flex;
@@ -703,17 +676,6 @@
                 Your browser does not support the video element.
             </video>
             
-            <div class="video-controls">
-                <button class="control-btn" onclick="skipVideo(10)"><i class="fas fa-forward"></i> +10s</button>
-                <button class="control-btn" onclick="skipVideo(-10)"><i class="fas fa-backward"></i> -10s</button>
-                <button class="control-btn" onclick="toggleFullscreen()"><i class="fas fa-expand"></i> Fullscreen</button>
-                <button class="control-btn" onclick="toggleMute()"><i class="fas fa-volume-mute"></i> Mute</button>
-                <button class="control-btn" onclick="setPlaybackRate(1.25)">1.25x</button>
-                <button class="control-btn" onclick="setPlaybackRate(1.5)">1.5x</button>
-                <button class="control-btn" onclick="setPlaybackRate(1)">1x</button>
-                <button class="control-btn" onclick="toggleQuality()"><i class="fas fa-cog"></i> Quality: <span id="currentQuality">4K</span></button>
-            </div>
-            
             <div class="video-info">
                 <p><strong>Authorized Email:</strong> <span id="authorizedEmail"></span></p>
                 <p><strong>Views Used:</strong> <span id="viewsUsed"></span></p>
@@ -722,11 +684,8 @@
             <div class="keyboard-shortcuts">
                 <h4><i class="fas fa-keyboard"></i> Keyboard Shortcuts</h4>
                 <p>
-                    <span class="shortcut">Space</span> Play/Pause | 
-                    <span class="shortcut">←</span> -10s | 
-                    <span class="shortcut">→</span> +10s | 
                     <span class="shortcut">F</span> Fullscreen | 
-                    <span class="shortcut">M</span> Mute
+                    Use Vimeo player controls for playback
                 </p>
             </div>
         </div>
@@ -741,7 +700,6 @@
         let currentVideoIndex = 0;
         let videoIds = [];
         let authorizedEmail = '';
-        let currentQuality = '4K'; // Calidad actual
         let currentVideoId = ''; // ID del video actual
         
         // Elementos del DOM
@@ -1058,7 +1016,7 @@
         function loadVideo(videoId, videoName) {
             currentVideoId = videoId; // Guardar ID del video actual
             
-            console.log(`🎬 Loading video: ${videoName} (ID: ${videoId}) in quality: ${currentQuality}`);
+            console.log(`🎬 Loading video: ${videoName} (ID: ${videoId})`);
             
             // Actualizar botón activo
             if (typeof window.updateActiveVideoButton === 'function') {
@@ -1129,21 +1087,7 @@
                 margin: 20px 0;
             `;
             
-            // Crear overlay para ocultar logo de Vimeo
-            const logoOverlay = document.createElement('div');
-            logoOverlay.style.cssText = `
-                position: absolute;
-                bottom: 0;
-                right: 0;
-                width: 60px;
-                height: 20px;
-                background: #000;
-                z-index: 10;
-                pointer-events: none;
-            `;
-            
             videoWrapper.appendChild(iframe);
-            videoWrapper.appendChild(logoOverlay);
             
             // Ocultar el elemento video y mostrar el wrapper del video
             videoPlayer.style.display = 'none';
@@ -1184,7 +1128,7 @@
         function loadVideoWithGoogleDriveFallback(videoId, videoName) {
             console.log('🔄 Usando Google Drive como fallback...');
             
-            const videoUrl = `/api/video-simple/stream-simple/${token}/${videoId}?quality=${currentQuality}`;
+            const videoUrl = `/api/video-simple/stream-simple/${token}/${videoId}`;
             console.log(`🔗 Google Drive URL: ${videoUrl}`);
             
             // Mostrar el elemento video
@@ -1212,8 +1156,8 @@
             });
             
             videoPlayer.addEventListener('loadeddata', () => {
-                console.log(`✅ Video loaded successfully in your player: ${videoName} in ${currentQuality}`);
-                showMessage(`<i class="fas fa-check"></i> Video ready to play in your player in ${currentQuality}`, 'success');
+                console.log(`✅ Video loaded successfully in your player: ${videoName}`);
+                showMessage(`<i class="fas fa-check"></i> Video ready to play in your player`, 'success');
                 
                 // Configurar protección adicional cuando el video se carga
                 setupVideoProtection();
@@ -1442,83 +1386,20 @@
             }, 2000);
         }
         
-        // Controles de video
-        function skipVideo(seconds) {
-            videoPlayer.currentTime += seconds;
-        }
-        
-        function toggleFullscreen() {
-            if (videoPlayer.requestFullscreen) {
-                videoPlayer.requestFullscreen();
-            } else if (videoPlayer.webkitRequestFullscreen) {
-                videoPlayer.webkitRequestFullscreen();
-            } else if (videoPlayer.msRequestFullscreen) {
-                videoPlayer.msRequestFullscreen();
-            }
-        }
-        
-        function toggleMute() {
-            videoPlayer.muted = !videoPlayer.muted;
-        }
-        
-        function setPlaybackRate(rate) {
-            videoPlayer.playbackRate = rate;
-        }
-        
-        // Toggle video quality
-        function toggleQuality() {
-            // Cambiar entre 4K y 1080p
-            currentQuality = currentQuality === '4K' ? '1080p' : '4K';
-            
-            // Actualizar el botón
-            document.getElementById('currentQuality').textContent = currentQuality;
-            
-            // Recargar el video con la nueva calidad
-            if (currentVideoId) {
-                const videoName = getVideoNameById(currentVideoId);
-                console.log(`🔄 Switching to ${currentQuality} quality for ${videoName}`);
-                loadVideo(currentVideoId, videoName);
-            }
-        }
-        
-        // Función auxiliar para obtener nombre del video por ID
-        function getVideoNameById(videoId) {
-            const videoMap = {
-                '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD': 'DEEL 1.mp4',
-                '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE': 'DEEL 2.mp4'
-            };
-            return videoMap[videoId] || 'Video';
-        }
-        
         // Configurar atajos de teclado
         function setupKeyboardShortcuts() {
             document.addEventListener('keydown', (e) => {
                 if (videoContainer.style.display === 'none') return;
                 
+                // Solo mantener atajos básicos que funcionen con Vimeo
                 switch(e.code) {
-                    case 'Space':
-                        e.preventDefault();
-                        if (videoPlayer.paused) {
-                            videoPlayer.play();
-                        } else {
-                            videoPlayer.pause();
-                        }
-                        break;
-                    case 'ArrowLeft':
-                        e.preventDefault();
-                        skipVideo(-10);
-                        break;
-                    case 'ArrowRight':
-                        e.preventDefault();
-                        skipVideo(10);
-                        break;
                     case 'KeyF':
                         e.preventDefault();
-                        toggleFullscreen();
-                        break;
-                    case 'KeyM':
-                        e.preventDefault();
-                        toggleMute();
+                        // Intentar pantalla completa en el contenedor del video
+                        const videoWrapper = document.querySelector('.video-wrapper');
+                        if (videoWrapper && videoWrapper.requestFullscreen) {
+                            videoWrapper.requestFullscreen();
+                        }
                         break;
                 }
             });
