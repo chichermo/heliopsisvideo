@@ -414,6 +414,68 @@
             justify-content: center;
         }
         
+        /* Estilos para los nuevos botones de selección de video */
+        .video-selection-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .video-buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .video-selection-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 15px;
+            padding: 25px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .video-selection-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .video-selection-btn.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            transform: scale(1.05);
+        }
+        
+        .video-btn-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .video-btn-content i {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        
+        .video-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .video-subtitle {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
         .video-tab {
             background: rgba(255, 255, 255, 0.1);
             color: white;
@@ -998,6 +1060,11 @@
             
             console.log(`🎬 Loading video: ${videoName} (ID: ${videoId}) in quality: ${currentQuality}`);
             
+            // Actualizar botón activo
+            if (typeof window.updateActiveVideoButton === 'function') {
+                window.updateActiveVideoButton(videoId);
+            }
+            
             // Intentar Vimeo primero
             console.log('🎥 Intentando Vimeo como fuente principal...');
             
@@ -1012,9 +1079,9 @@
             const vimeoUrl = `/api/vimeo/stream/${videoId}`;
             console.log(`🔗 Vimeo URL: ${vimeoUrl}`);
             
-            // Crear iframe para Vimeo con tamaño completo y sin scroll
+            // Crear iframe para Vimeo con controles nativos y sin logo
             const iframe = document.createElement('iframe');
-            iframe.src = vimeoUrl;
+            iframe.src = vimeoUrl + '&title=0&byline=0&portrait=0&badge=0&autopause=0&autoplay=0';
             iframe.style.cssText = `
                 width: 100%;
                 height: 100%;
@@ -1043,39 +1110,7 @@
                 margin: 20px 0;
             `;
             
-            // Crear controles personalizados
-            const controlsOverlay = document.createElement('div');
-            controlsOverlay.className = 'video-controls-overlay';
-            controlsOverlay.innerHTML = `
-                <div class="progress-bar" id="progressBar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                <div class="controls-row">
-                    <button class="control-button" id="playPauseBtn">
-                        <i class="fas fa-play" id="playIcon"></i>
-                        <span id="playText">Play</span>
-                    </button>
-                    <div class="volume-control">
-                        <i class="fas fa-volume-up" id="volumeIcon"></i>
-                        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100">
-                        <span id="volumeText">100%</span>
-                    </div>
-                    <select class="quality-selector" id="qualitySelector">
-                        <option value="4K">4K</option>
-                        <option value="1080p">1080p</option>
-                        <option value="720p">720p</option>
-                        <option value="480p">480p</option>
-                    </select>
-                    <button class="control-button" id="fullscreenBtn">
-                        <i class="fas fa-expand"></i>
-                        <span>Fullscreen</span>
-                    </button>
-                    <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
-                </div>
-            `;
-            
             videoWrapper.appendChild(iframe);
-            videoWrapper.appendChild(controlsOverlay);
             
             // Ocultar el elemento video y mostrar el wrapper del video
             videoPlayer.style.display = 'none';
@@ -1093,45 +1128,6 @@
             iframe.onload = () => {
                 console.log('✅ Video cargado exitosamente');
                 showMessage(`<i class="fas fa-check"></i> Video ready to play`, 'success');
-                
-                // Inicializar controles personalizados
-                initializeCustomControls(iframe, videoWrapper);
-                
-                // Escuchar mensajes del iframe de Vimeo
-                window.addEventListener('message', (event) => {
-                    if (event.origin !== 'https://player.vimeo.com' && event.origin !== window.location.origin) {
-                        return;
-                    }
-                    
-                    const data = event.data;
-                    console.log('📨 Mensaje recibido de Vimeo:', data);
-                    
-                    switch (data.event) {
-                        case 'ready':
-                            console.log('🎬 Vimeo player listo');
-                            break;
-                        case 'play':
-                            isPlaying = true;
-                            playIcon.className = 'fas fa-pause';
-                            playText.textContent = 'Pause';
-                            break;
-                        case 'pause':
-                            isPlaying = false;
-                            playIcon.className = 'fas fa-play';
-                            playText.textContent = 'Play';
-                            break;
-                        case 'timeupdate':
-                            currentTime = data.data.seconds;
-                            duration = data.data.duration;
-                            updateProgressBar();
-                            break;
-                        case 'volumechange':
-                            volume = data.data.volume * 100;
-                            volumeSlider.value = volume;
-                            volumeText.textContent = Math.round(volume) + '%';
-                            break;
-                    }
-                });
             };
         }
         
@@ -1329,16 +1325,31 @@
             
             console.log('🎯 Creando botones de video...');
             
-            // Crear botones de video usando el CSS existente
+            // Crear botones de video más visibles y estilizados
             videoSelector.innerHTML = `
-                <button onclick="loadVideo('1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', 'DEEL 1.mp4')" 
-                        class="video-tab active">
-                    <i class="fas fa-play"></i> DEEL 1.mp4
-                </button>
-                <button onclick="loadVideo('1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE', 'DEEL 2.mp4')" 
-                        class="video-tab">
-                    <i class="fas fa-play"></i> DEEL 2.mp4
-                </button>
+                <div class="video-selection-container">
+                    <h3 style="text-align: center; margin-bottom: 20px; color: #333;">
+                        <i class="fas fa-video"></i> Selecciona el Video
+                    </h3>
+                    <div class="video-buttons-grid">
+                        <button onclick="loadVideo('1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', 'DEEL 1.mp4')" 
+                                class="video-selection-btn active" id="video1-btn">
+                            <div class="video-btn-content">
+                                <i class="fas fa-play-circle"></i>
+                                <span class="video-title">DEEL 1</span>
+                                <span class="video-subtitle">Primera Parte</span>
+                            </div>
+                        </button>
+                        <button onclick="loadVideo('1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE', 'DEEL 2.mp4')" 
+                                class="video-selection-btn" id="video2-btn">
+                            <div class="video-btn-content">
+                                <i class="fas fa-play-circle"></i>
+                                <span class="video-title">DEEL 2</span>
+                                <span class="video-subtitle">Segunda Parte</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
             `;
             
             console.log('✅ Botones de video creados:', videoSelector.innerHTML);
@@ -1346,6 +1357,23 @@
             // Cargar el primer video por defecto
             console.log('🎬 Cargando primer video por defecto...');
             loadVideo('1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', 'DEEL 1.mp4');
+            
+            // Agregar función para actualizar botones activos
+            window.updateActiveVideoButton = function(videoId) {
+                const video1Btn = document.getElementById('video1-btn');
+                const video2Btn = document.getElementById('video2-btn');
+                
+                if (video1Btn && video2Btn) {
+                    video1Btn.classList.remove('active');
+                    video2Btn.classList.remove('active');
+                    
+                    if (videoId === '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD') {
+                        video1Btn.classList.add('active');
+                    } else if (videoId === '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE') {
+                        video2Btn.classList.add('active');
+                    }
+                }
+            };
         }
         // Función para cargar video grande - redirección directa sin iframe
         function loadVideoWithIframe(videoUrl, videoName) {
