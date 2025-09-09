@@ -53,6 +53,12 @@ app.use(express.static('public'));
 // Inicializar base de datos
 initDatabase();
 
+// Inicializar tabla de tokens automáticamente
+const { initializeTokensTable } = require('./database/auto-init-tokens');
+setTimeout(() => {
+    initializeTokensTable();
+}, 2000); // Esperar 2 segundos para que la base de datos se inicialice
+
 // Rutas de la API
 app.use('/api/googledrive', googledriveRoutes);
 app.use('/api/access', accessRoutes);
