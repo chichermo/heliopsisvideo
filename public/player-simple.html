@@ -1299,8 +1299,17 @@
         
         // Función para mostrar lista de videos integrada en videoSelector
         function showVideoList() {
+            console.log('🎬 Mostrando lista de videos...');
+            
             const videoSelector = document.getElementById('videoSelector');
             const videoPlayer = document.getElementById('videoPlayer');
+            const videoContainer = document.getElementById('videoContainer');
+            
+            console.log('📋 Elementos encontrados:', {
+                videoSelector: !!videoSelector,
+                videoPlayer: !!videoPlayer,
+                videoContainer: !!videoContainer
+            });
             
             // Limpiar iframe y botón de regreso si existen
             const existingIframe = document.getElementById('largeVideoFrame');
@@ -1318,6 +1327,8 @@
             // Limpiar el selector existente
             videoSelector.innerHTML = '';
             
+            console.log('🎯 Creando botones de video...');
+            
             // Crear botones de video usando el CSS existente
             videoSelector.innerHTML = `
                 <button onclick="loadVideo('1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', 'DEEL 1.mp4')" 
@@ -1330,7 +1341,10 @@
                 </button>
             `;
             
+            console.log('✅ Botones de video creados:', videoSelector.innerHTML);
+            
             // Cargar el primer video por defecto
+            console.log('🎬 Cargando primer video por defecto...');
             loadVideo('1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', 'DEEL 1.mp4');
         }
         // Función para cargar video grande - redirección directa sin iframe
@@ -1497,47 +1511,21 @@
                         message.value = value;
                     }
                     
-                    // Intentar múltiples métodos de comunicación
-                    try {
-                        iframe.contentWindow.postMessage(message, '*');
-                    } catch (e) {
-                        console.log('⚠️ PostMessage con * falló');
-                    }
-                    
-                    try {
-                        iframe.contentWindow.postMessage(message, 'https://player.vimeo.com');
-                    } catch (e) {
-                        console.log('⚠️ PostMessage con Vimeo origin falló');
-                    }
-                    
-                    // Intentar con el origen del iframe
-                    try {
-                        iframe.contentWindow.postMessage(message, iframe.src);
-                    } catch (e) {
-                        console.log('⚠️ PostMessage con iframe src falló');
-                    }
+                    // Solo intentar con el origen correcto de Vimeo
+                    iframe.contentWindow.postMessage(message, 'https://player.vimeo.com');
                     
                 } catch (error) {
                     console.log('⚠️ No se puede comunicar con el iframe de Vimeo:', error);
                 }
             }
             
-            // Control de Play/Pause
+            // Control de Play/Pause (solo informativo)
             playPauseBtn.addEventListener('click', () => {
-                if (isPlaying) {
-                    sendVimeoCommand('pause');
-                    playIcon.className = 'fas fa-play';
-                    playText.textContent = 'Play';
-                    isPlaying = false;
-                } else {
-                    sendVimeoCommand('play');
-                    playIcon.className = 'fas fa-pause';
-                    playText.textContent = 'Pause';
-                    isPlaying = true;
-                }
+                console.log('🎮 Botón Play/Pause presionado - Usa los controles de Vimeo');
+                showMessage('Usa los controles del reproductor de Vimeo', 'info');
             });
             
-            // Control de volumen
+            // Control de volumen (solo informativo)
             volumeSlider.addEventListener('input', (e) => {
                 volume = e.target.value;
                 volumeText.textContent = volume + '%';
@@ -1551,7 +1539,7 @@
                     volumeIcon.className = 'fas fa-volume-up';
                 }
                 
-                sendVimeoCommand('setVolume', volume / 100);
+                console.log('🎮 Volumen cambiado a:', volume + '%');
             });
             
             // Función para actualizar la barra de progreso
