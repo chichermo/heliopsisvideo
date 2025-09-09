@@ -17,6 +17,7 @@
     "express-rate-limit": "^7.1.5",
     "googleapis": "^156.0.0",
     "helmet": "^7.1.0",
+    "node-fetch": "^3.3.2",
     "sqlite3": "^5.1.7",
     "uuid": "^9.0.1",
     "vimeo": "^2.1.1"
