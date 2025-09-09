@@ -7,6 +7,28 @@ async function restoreEmergencyTokens() {
     // Tokens de emergencia que estaban hardcodeados
     const emergencyTokens = [
         {
+            token: '0a95b5699675be71c815e8475005294f',
+            email: 'erienpoppe@gmail.com',
+            password: 'kxg8AsFg',
+            video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
+            views: 0,
+            max_views: 999999,
+            is_permanent: true,
+            requires_password: true,
+            status: 'permanente'
+        },
+        {
+            token: '6679c5eff294e2014ace94dc0fbf2ac5',
+            email: 'shana.moyaert@hotmail.com',
+            password: 'zlhv96rH',
+            video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
+            views: 0,
+            max_views: 999999,
+            is_permanent: true,
+            requires_password: true,
+            status: 'permanente'
+        },
+        {
             token: '3e736c6f6eb01c7942fe52e841495877',
             email: 'johnnycoppejans@hotmail.com',
             password: '7WbovVpD',
