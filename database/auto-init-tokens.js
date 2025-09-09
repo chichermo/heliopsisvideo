@@ -93,61 +93,47 @@ function createNewTable() {
 }
 
 function migrateTable() {
-    // Crear tabla temporal con estructura completa
-    db.run(`CREATE TABLE simple_tokens_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        token TEXT UNIQUE NOT NULL,
-        email TEXT NOT NULL,
-        video_ids TEXT NOT NULL,
-        password TEXT,
-        views INTEGER DEFAULT 0,
-        max_views INTEGER DEFAULT 1,
-        is_permanent BOOLEAN DEFAULT 0,
-        requires_password BOOLEAN DEFAULT 0,
-        status TEXT DEFAULT 'activo',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_used DATETIME DEFAULT CURRENT_TIMESTAMP,
-        is_active BOOLEAN DEFAULT 1,
-        last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
-        notes TEXT,
-        payment_status TEXT DEFAULT 'completed'
-    )`, (err) => {
+    console.log('🔄 Simplificando migración: recreando tabla completa...');
+    
+    // Eliminar tabla existente y crear una nueva
+    db.run(`DROP TABLE simple_tokens`, (err) => {
         if (err) {
-            console.error('❌ Error creando tabla temporal:', err);
+            console.error('❌ Error eliminando tabla antigua:', err);
             return;
         }
         
-        console.log('✅ Tabla temporal creada, copiando datos...');
+        console.log('✅ Tabla antigua eliminada, creando nueva...');
         
-        // Copiar datos existentes
-        db.run(`INSERT INTO simple_tokens_new 
-            (id, token, email, video_ids, password, views, max_views, created_at, last_used)
-            SELECT id, token, email, video_ids, password, views, max_views, created_at, last_used
-            FROM simple_tokens`, (err) => {
+        // Crear nueva tabla con estructura completa
+        const createTableSQL = `
+            CREATE TABLE simple_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token TEXT UNIQUE NOT NULL,
+                email TEXT NOT NULL,
+                video_ids TEXT NOT NULL,
+                password TEXT,
+                views INTEGER DEFAULT 0,
+                max_views INTEGER DEFAULT 1,
+                is_permanent BOOLEAN DEFAULT 0,
+                requires_password BOOLEAN DEFAULT 0,
+                status TEXT DEFAULT 'activo',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_used DATETIME DEFAULT CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1,
+                last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
+                notes TEXT,
+                payment_status TEXT DEFAULT 'completed'
+            )
+        `;
+        
+        db.run(createTableSQL, (err) => {
             if (err) {
-                console.error('❌ Error copiando datos:', err);
+                console.error('❌ Error creando nueva tabla:', err);
                 return;
             }
             
-            console.log('✅ Datos copiados, reemplazando tabla...');
-            
-            // Eliminar tabla antigua y renombrar la nueva
-            db.run(`DROP TABLE simple_tokens`, (err) => {
-                if (err) {
-                    console.error('❌ Error eliminando tabla antigua:', err);
-                    return;
-                }
-                
-                db.run(`ALTER TABLE simple_tokens_new RENAME TO simple_tokens`, (err) => {
-                    if (err) {
-                        console.error('❌ Error renombrando tabla:', err);
-                        return;
-                    }
-                    
-                    console.log('✅ Migración completada');
-                    insertEmergencyTokens();
-                });
-            });
+            console.log('✅ Nueva tabla creada con estructura completa');
+            insertEmergencyTokens();
         });
     });
 }
