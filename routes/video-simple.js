@@ -1225,4 +1225,106 @@ router.get('/emergency-token/:token', (req, res) => {
     }
 });
 
+// Ruta para hacer token permanente (solo para tokens nuevos del localStorage)
+router.put('/make-permanent/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        
+        console.log(`🔒 Intentando hacer permanente el token: ${token}`);
+        
+        // Solo procesar tokens que no están en la base de datos (tokens nuevos)
+        const query = 'SELECT * FROM simple_tokens WHERE token = ?';
+        
+        db.get(query, [token], (err, row) => {
+            if (err) {
+                console.error('❌ Error verificando token:', err);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Error verificando token' 
+                });
+            }
+            
+            // Si el token existe en la base de datos, no permitir cambios
+            if (row) {
+                console.log(`⚠️ Token ${token} ya existe en base de datos, no se puede modificar`);
+                return res.json({ 
+                    success: false, 
+                    error: 'Token ya existe en base de datos' 
+                });
+            }
+            
+            // Token no existe en BD, es un token nuevo del localStorage
+            console.log(`✅ Token ${token} es nuevo, se puede hacer permanente`);
+            
+            res.json({
+                success: true,
+                message: 'Token marcado como permanente en frontend',
+                data: {
+                    token: token,
+                    is_permanent: true,
+                    note: 'Este cambio se aplica solo en el frontend'
+                }
+            });
+        });
+        
+    } catch (error) {
+        console.error('❌ Error haciendo token permanente:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Error interno del servidor' 
+        });
+    }
+});
+
+// Ruta para hacer token temporal (solo para tokens nuevos del localStorage)
+router.put('/make-temporary/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        
+        console.log(`🔓 Intentando hacer temporal el token: ${token}`);
+        
+        // Solo procesar tokens que no están en la base de datos (tokens nuevos)
+        const query = 'SELECT * FROM simple_tokens WHERE token = ?';
+        
+        db.get(query, [token], (err, row) => {
+            if (err) {
+                console.error('❌ Error verificando token:', err);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Error verificando token' 
+                });
+            }
+            
+            // Si el token existe en la base de datos, no permitir cambios
+            if (row) {
+                console.log(`⚠️ Token ${token} ya existe en base de datos, no se puede modificar`);
+                return res.json({ 
+                    success: false, 
+                    error: 'Token ya existe en base de datos' 
+                });
+            }
+            
+            // Token no existe en BD, es un token nuevo del localStorage
+            console.log(`✅ Token ${token} es nuevo, se puede hacer temporal`);
+            
+            res.json({
+                success: true,
+                message: 'Token marcado como temporal en frontend',
+                data: {
+                    token: token,
+                    is_permanent: false,
+                    note: 'Este cambio se aplica solo en el frontend'
+                }
+            });
+        });
+        
+    } catch (error) {
+        console.error('❌ Error haciendo token temporal:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Error interno del servidor' 
+        });
+    }
+});
+
 module.exports = router;

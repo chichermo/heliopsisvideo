@@ -1125,8 +1125,9 @@
                 views: 0,
                 max_views: 999999,
                 is_active: true,
+                is_permanent: false, // Por defecto son temporales
                 created_at: new Date().toISOString().split('T')[0],
-                notes: 'Token nuevo',
+                notes: 'Token temporal',
                 video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE']
             };
             
@@ -1189,6 +1190,14 @@
                             <button class="btn btn-small btn-secondary" onclick="resetTokenViews('${token.token}')">
                                 <i class="fas fa-refresh"></i> Reset Views
                             </button>
+                            ${!token.is_permanent ? 
+                                `<button class="btn btn-small btn-success" onclick="makeTokenPermanent('${token.token}')">
+                                    <i class="fas fa-lock"></i> Make Permanent
+                                </button>` : 
+                                `<button class="btn btn-small btn-warning" onclick="makeTokenTemporary('${token.token}')">
+                                    <i class="fas fa-unlock"></i> Make Temporary
+                                </button>`
+                            }
                             <button class="btn btn-small btn-danger" onclick="deleteToken('${token.token}')">
                                 <i class="fas fa-trash"></i> Delete
                             </button>
@@ -1280,6 +1289,92 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Error updating token notes');
+            }
+        }
+        
+        // Hacer token permanente
+        async function makeTokenPermanent(token) {
+            if (!confirm('Are you sure you want to make this token permanent? It will never expire.')) return;
+            
+            try {
+                // Llamar al backend para verificar si es un token nuevo
+                const response = await fetch(`/api/video-simple/make-permanent/${token}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Obtener tokens del localStorage
+                    const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+                    
+                    // Encontrar y actualizar el token
+                    const tokenIndex = newTokens.findIndex(t => t.token === token);
+                    if (tokenIndex !== -1) {
+                        newTokens[tokenIndex].is_permanent = true;
+                        newTokens[tokenIndex].notes = 'Token permanente';
+                        
+                        // Guardar en localStorage
+                        localStorage.setItem('newTokens', JSON.stringify(newTokens));
+                        
+                        // Actualizar la vista
+                        const allTokens = getAllTokens();
+                        displayTokens(allTokens);
+                        
+                        alert('Token made permanent successfully!');
+                    } else {
+                        alert('Token not found in new tokens list');
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error making token permanent');
+            }
+        }
+        
+        // Hacer token temporal
+        async function makeTokenTemporary(token) {
+            if (!confirm('Are you sure you want to make this token temporary? It will expire after use.')) return;
+            
+            try {
+                // Llamar al backend para verificar si es un token nuevo
+                const response = await fetch(`/api/video-simple/make-temporary/${token}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Obtener tokens del localStorage
+                    const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+                    
+                    // Encontrar y actualizar el token
+                    const tokenIndex = newTokens.findIndex(t => t.token === token);
+                    if (tokenIndex !== -1) {
+                        newTokens[tokenIndex].is_permanent = false;
+                        newTokens[tokenIndex].notes = 'Token temporal';
+                        
+                        // Guardar en localStorage
+                        localStorage.setItem('newTokens', JSON.stringify(newTokens));
+                        
+                        // Actualizar la vista
+                        const allTokens = getAllTokens();
+                        displayTokens(allTokens);
+                        
+                        alert('Token made temporary successfully!');
+                    } else {
+                        alert('Token not found in new tokens list');
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error making token temporary');
             }
         }
         

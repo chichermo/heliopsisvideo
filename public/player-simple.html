@@ -829,6 +829,18 @@
             console.log('🛡️ Download protection activated (video-specific)');
         }
         
+        // Verificar si un token es permanente (desde localStorage)
+        function isTokenPermanent(token) {
+            try {
+                const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+                const tokenData = newTokens.find(t => t.token === token);
+                return tokenData ? tokenData.is_permanent : false;
+            } catch (error) {
+                console.error('Error checking token permanence:', error);
+                return false;
+            }
+        }
+        
         // Verificar acceso al token
         async function checkAccess() {
             try {
@@ -836,7 +848,34 @@
                 
                 console.log(`🔍 Frontend: Verificando token ${token}`);
                 
-                // PRIMERO: Intentar sistema de emergencia (tokens hardcodeados)
+                // PRIMERO: Verificar si es un token permanente del localStorage
+                if (isTokenPermanent(token)) {
+                    console.log(`🔒 Frontend: Token permanente encontrado en localStorage`);
+                    
+                    const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+                    const tokenData = newTokens.find(t => t.token === token);
+                    
+                    if (tokenData) {
+                        console.log(`✅ Frontend: Token permanente válido, mostrando formulario`);
+                        updateStatus('<i class="fas fa-check"></i> Token valid', 60);
+                        
+                        // Crear objeto de datos compatible con el sistema existente
+                        const compatibleData = {
+                            email: tokenData.email,
+                            video_ids: tokenData.video_ids,
+                            views: tokenData.views,
+                            max_views: tokenData.max_views,
+                            is_permanent: true,
+                            requires_password: true,
+                            status: 'permanente'
+                        };
+                        
+                        showEmailForm(compatibleData);
+                        return;
+                    }
+                }
+                
+                // SEGUNDO: Intentar sistema de emergencia (tokens hardcodeados)
                 let response = await fetch(`/api/emergency-token/${token}`);
                 console.log(`📡 Frontend: Emergency response status: ${response.status}`);
                 
@@ -892,7 +931,38 @@
             const password = document.getElementById('password').value;
             
             try {
-                // PRIMERO: Intentar sistema de emergencia
+                // PRIMERO: Verificar si es un token permanente del localStorage
+                if (isTokenPermanent(token)) {
+                    console.log(`🔒 Frontend: Verificando credenciales para token permanente del localStorage`);
+                    
+                    const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+                    const tokenData = newTokens.find(t => t.token === token);
+                    
+                    if (tokenData && tokenData.email === email && tokenData.password === password) {
+                        console.log(`✅ Frontend: Credenciales válidas para token permanente`);
+                        showSuccess('<i class="fas fa-check"></i> Access authorized');
+                        
+                        // Crear objeto de datos compatible
+                        const compatibleData = {
+                            email: tokenData.email,
+                            video_ids: tokenData.video_ids,
+                            views: tokenData.views,
+                            max_views: tokenData.max_views,
+                            is_permanent: true,
+                            requires_password: true,
+                            status: 'permanente'
+                        };
+                        
+                        loadVideoPlayer(compatibleData);
+                        return;
+                    } else {
+                        console.log(`❌ Frontend: Credenciales incorrectas para token permanente`);
+                        showError('<i class="fas fa-times"></i> Incorrect credentials');
+                        return;
+                    }
+                }
+                
+                // SEGUNDO: Intentar sistema de emergencia
                 let response = await fetch(`/api/emergency-token/${token}`, {
                     method: 'POST',
                     headers: {
