@@ -829,6 +829,17 @@
             console.log('🛡️ Download protection activated (video-specific)');
         }
         
+        // Verificar si un token existe en localStorage (nuevo o permanente)
+        function isTokenInLocalStorage(token) {
+            try {
+                const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+                return newTokens.find(t => t.token === token) !== undefined;
+            } catch (error) {
+                console.error('Error checking token in localStorage:', error);
+                return false;
+            }
+        }
+        
         // Verificar si un token es permanente (desde localStorage)
         function isTokenPermanent(token) {
             try {
@@ -848,15 +859,15 @@
                 
                 console.log(`🔍 Frontend: Verifying token ${token}`);
                 
-                // PRIMERO: Verificar si es un token permanente del localStorage
-                if (isTokenPermanent(token)) {
-                    console.log(`🔒 Frontend: Permanent token found in localStorage`);
+                // PRIMERO: Verificar si es un token nuevo del localStorage (permanente o temporal)
+                if (isTokenInLocalStorage(token)) {
+                    console.log(`🔒 Frontend: New token found in localStorage`);
                     
                     const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
                     const tokenData = newTokens.find(t => t.token === token);
                     
                     if (tokenData) {
-                        console.log(`✅ Frontend: Valid permanent token, showing form`);
+                        console.log(`✅ Frontend: Valid new token, showing form`);
                         updateStatus('<i class="fas fa-check"></i> Token valid', 60);
                         
                         // Crear objeto de datos compatible con el sistema existente
@@ -865,9 +876,9 @@
                             video_ids: tokenData.video_ids,
                             views: tokenData.views,
                             max_views: tokenData.max_views,
-                            is_permanent: true,
+                            is_permanent: tokenData.is_permanent,
                             requires_password: true,
-                            status: 'permanente'
+                            status: tokenData.is_permanent ? 'permanente' : 'temporal'
                         };
                         
                         showEmailForm(compatibleData);
@@ -931,15 +942,15 @@
             const password = document.getElementById('password').value;
             
             try {
-                // PRIMERO: Verificar si es un token permanente del localStorage
-                if (isTokenPermanent(token)) {
-                    console.log(`🔒 Frontend: Verifying credentials for permanent token from localStorage`);
+                // PRIMERO: Verificar si es un token nuevo del localStorage (permanente o temporal)
+                if (isTokenInLocalStorage(token)) {
+                    console.log(`🔒 Frontend: Verifying credentials for new token from localStorage`);
                     
                     const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
                     const tokenData = newTokens.find(t => t.token === token);
                     
                     if (tokenData && tokenData.email === email && tokenData.password === password) {
-                        console.log(`✅ Frontend: Valid credentials for permanent token`);
+                        console.log(`✅ Frontend: Valid credentials for new token`);
                         showSuccess('<i class="fas fa-check"></i> Access authorized');
                         
                         // Crear objeto de datos compatible
@@ -948,15 +959,15 @@
                             video_ids: tokenData.video_ids,
                             views: tokenData.views,
                             max_views: tokenData.max_views,
-                            is_permanent: true,
+                            is_permanent: tokenData.is_permanent,
                             requires_password: true,
-                            status: 'permanente'
+                            status: tokenData.is_permanent ? 'permanente' : 'temporal'
                         };
                         
                         loadVideoPlayer(compatibleData);
                         return;
                     } else {
-                        console.log(`❌ Frontend: Invalid credentials for permanent token`);
+                        console.log(`❌ Frontend: Invalid credentials for new token`);
                         showError('<i class="fas fa-times"></i> Incorrect credentials');
                         return;
                     }
