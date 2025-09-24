@@ -1123,12 +1123,14 @@
                 token: token,
                 password: password,
                 views: 0,
-                max_views: 999999,
+                max_views: 999999, // Nunca expira por límite de vistas
                 is_active: true,
                 is_permanent: false, // Por defecto son temporales
                 created_at: new Date().toISOString().split('T')[0],
                 notes: 'Temporary token',
-                video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE']
+                video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
+                expires_at: null, // Nunca expira por fecha
+                never_expires: true // Flag adicional para asegurar que nunca expire
             };
             
             // Obtener tokens existentes del localStorage
@@ -1304,6 +1306,9 @@
             if (tokenIndex !== -1) {
                 newTokens[tokenIndex].is_permanent = true;
                 newTokens[tokenIndex].notes = 'Permanent token';
+                newTokens[tokenIndex].max_views = 999999; // Asegurar que nunca expire
+                newTokens[tokenIndex].expires_at = null; // Nunca expira por fecha
+                newTokens[tokenIndex].never_expires = true; // Flag adicional
                 
                 // Guardar en localStorage
                 localStorage.setItem('newTokens', JSON.stringify(newTokens));
@@ -1320,7 +1325,7 @@
         
         // Hacer token temporal
         function makeTokenTemporary(token) {
-            if (!confirm('Are you sure you want to make this token temporary? It will expire after use.')) return;
+            if (!confirm('Are you sure you want to make this token temporary? Note: It will still never expire.')) return;
             
             // Obtener tokens del localStorage
             const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
@@ -1330,6 +1335,9 @@
             if (tokenIndex !== -1) {
                 newTokens[tokenIndex].is_permanent = false;
                 newTokens[tokenIndex].notes = 'Temporary token';
+                newTokens[tokenIndex].max_views = 999999; // Asegurar que nunca expire
+                newTokens[tokenIndex].expires_at = null; // Nunca expira por fecha
+                newTokens[tokenIndex].never_expires = true; // Flag adicional
                 
                 // Guardar en localStorage
                 localStorage.setItem('newTokens', JSON.stringify(newTokens));
