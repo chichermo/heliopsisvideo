@@ -846,17 +846,17 @@
             try {
                 updateStatus('<i class="fas fa-search"></i> Verifying token...', 20);
                 
-                console.log(`🔍 Frontend: Verificando token ${token}`);
+                console.log(`🔍 Frontend: Verifying token ${token}`);
                 
                 // PRIMERO: Verificar si es un token permanente del localStorage
                 if (isTokenPermanent(token)) {
-                    console.log(`🔒 Frontend: Token permanente encontrado en localStorage`);
+                    console.log(`🔒 Frontend: Permanent token found in localStorage`);
                     
                     const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
                     const tokenData = newTokens.find(t => t.token === token);
                     
                     if (tokenData) {
-                        console.log(`✅ Frontend: Token permanente válido, mostrando formulario`);
+                        console.log(`✅ Frontend: Valid permanent token, showing form`);
                         updateStatus('<i class="fas fa-check"></i> Token valid', 60);
                         
                         // Crear objeto de datos compatible con el sistema existente
@@ -884,7 +884,7 @@
                 
                 // Si el sistema de emergencia no encuentra el token, intentar base de datos
                 if (!data.success) {
-                    console.log(`🔄 Frontend: Token no encontrado en emergencia, intentando base de datos...`);
+                    console.log(`🔄 Frontend: Token not found in emergency, trying database...`);
                     
                     response = await fetch(`/api/video-simple/check-simple/${token}`);
                     console.log(`📡 Frontend: Database response status: ${response.status}`);
@@ -894,13 +894,13 @@
                 }
                 
                 if (data.success) {
-                    console.log(`✅ Frontend: Token válido, mostrando formulario`);
+                    console.log(`✅ Frontend: Valid token, showing form`);
                     updateStatus('<i class="fas fa-check"></i> Token valid', 60);
                     
                     // Show authentication form
                     showEmailForm(data.data);
                 } else {
-                    console.log(`❌ Frontend: Token inválido:`, data.error);
+                    console.log(`❌ Frontend: Invalid token:`, data.error);
                     showError('<i class="fas fa-times"></i> Invalid or expired token');
                 }
             } catch (error) {
@@ -933,13 +933,13 @@
             try {
                 // PRIMERO: Verificar si es un token permanente del localStorage
                 if (isTokenPermanent(token)) {
-                    console.log(`🔒 Frontend: Verificando credenciales para token permanente del localStorage`);
+                    console.log(`🔒 Frontend: Verifying credentials for permanent token from localStorage`);
                     
                     const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
                     const tokenData = newTokens.find(t => t.token === token);
                     
                     if (tokenData && tokenData.email === email && tokenData.password === password) {
-                        console.log(`✅ Frontend: Credenciales válidas para token permanente`);
+                        console.log(`✅ Frontend: Valid credentials for permanent token`);
                         showSuccess('<i class="fas fa-check"></i> Access authorized');
                         
                         // Crear objeto de datos compatible
@@ -956,7 +956,7 @@
                         loadVideoPlayer(compatibleData);
                         return;
                     } else {
-                        console.log(`❌ Frontend: Credenciales incorrectas para token permanente`);
+                        console.log(`❌ Frontend: Invalid credentials for permanent token`);
                         showError('<i class="fas fa-times"></i> Incorrect credentials');
                         return;
                     }
@@ -978,7 +978,7 @@
                 
                 // Si el sistema de emergencia falla, intentar base de datos
                 if (!data.success) {
-                    console.log(`🔄 Frontend: Credenciales no válidas en emergencia, intentando base de datos...`);
+                    console.log(`🔄 Frontend: Invalid credentials in emergency, trying database...`);
                     
                     response = await fetch(`/api/video-simple/check-simple/${token}`, {
                         method: 'POST',
@@ -1158,17 +1158,17 @@
             
             // Manejar errores del iframe
             iframe.onerror = () => {
-                console.log('❌ Error cargando Vimeo, intentando Google Drive como fallback...');
+                console.log('❌ Error loading Vimeo, trying Google Drive as fallback...');
                 loadVideoWithGoogleDriveFallback(videoId, videoName);
             };
             
             iframe.onload = () => {
-                console.log('✅ Video cargado exitosamente');
+                console.log('✅ Video loaded successfully');
                 showMessage(`<i class="fas fa-check"></i> Video ready to play`, 'success');
                 
                 // Verificar que el iframe esté visible
-                console.log('🔍 Verificando visibilidad del iframe...');
-                console.log('📏 Dimensiones del iframe:', {
+                console.log('🔍 Checking iframe visibility...');
+                console.log('📏 Iframe dimensions:', {
                     width: iframe.offsetWidth,
                     height: iframe.offsetHeight,
                     display: window.getComputedStyle(iframe).display,

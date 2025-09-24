@@ -1127,7 +1127,7 @@
                 is_active: true,
                 is_permanent: false, // Por defecto son temporales
                 created_at: new Date().toISOString().split('T')[0],
-                notes: 'Token temporal',
+                notes: 'Temporary token',
                 video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE']
             };
             
@@ -1293,88 +1293,54 @@
         }
         
         // Hacer token permanente
-        async function makeTokenPermanent(token) {
+        function makeTokenPermanent(token) {
             if (!confirm('Are you sure you want to make this token permanent? It will never expire.')) return;
             
-            try {
-                // Llamar al backend para verificar si es un token nuevo
-                const response = await fetch(`/api/video-simple/make-permanent/${token}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+            // Obtener tokens del localStorage
+            const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+            
+            // Encontrar y actualizar el token
+            const tokenIndex = newTokens.findIndex(t => t.token === token);
+            if (tokenIndex !== -1) {
+                newTokens[tokenIndex].is_permanent = true;
+                newTokens[tokenIndex].notes = 'Permanent token';
                 
-                const data = await response.json();
+                // Guardar en localStorage
+                localStorage.setItem('newTokens', JSON.stringify(newTokens));
                 
-                if (data.success) {
-                    // Obtener tokens del localStorage
-                    const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-                    
-                    // Encontrar y actualizar el token
-                    const tokenIndex = newTokens.findIndex(t => t.token === token);
-                    if (tokenIndex !== -1) {
-                        newTokens[tokenIndex].is_permanent = true;
-                        newTokens[tokenIndex].notes = 'Token permanente';
-                        
-                        // Guardar en localStorage
-                        localStorage.setItem('newTokens', JSON.stringify(newTokens));
-                        
-                        // Actualizar la vista
-                        const allTokens = getAllTokens();
-                        displayTokens(allTokens);
-                        
-                        alert('Token made permanent successfully!');
-                    } else {
-                        alert('Token not found in new tokens list');
-                    }
-                } else {
-                    alert('Error: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error making token permanent');
+                // Actualizar la vista
+                const allTokens = getAllTokens();
+                displayTokens(allTokens);
+                
+                alert('Token made permanent successfully!');
+            } else {
+                alert('Token not found in new tokens list');
             }
         }
         
         // Hacer token temporal
-        async function makeTokenTemporary(token) {
+        function makeTokenTemporary(token) {
             if (!confirm('Are you sure you want to make this token temporary? It will expire after use.')) return;
             
-            try {
-                // Llamar al backend para verificar si es un token nuevo
-                const response = await fetch(`/api/video-simple/make-temporary/${token}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+            // Obtener tokens del localStorage
+            const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
+            
+            // Encontrar y actualizar el token
+            const tokenIndex = newTokens.findIndex(t => t.token === token);
+            if (tokenIndex !== -1) {
+                newTokens[tokenIndex].is_permanent = false;
+                newTokens[tokenIndex].notes = 'Temporary token';
                 
-                const data = await response.json();
+                // Guardar en localStorage
+                localStorage.setItem('newTokens', JSON.stringify(newTokens));
                 
-                if (data.success) {
-                    // Obtener tokens del localStorage
-                    const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-                    
-                    // Encontrar y actualizar el token
-                    const tokenIndex = newTokens.findIndex(t => t.token === token);
-                    if (tokenIndex !== -1) {
-                        newTokens[tokenIndex].is_permanent = false;
-                        newTokens[tokenIndex].notes = 'Token temporal';
-                        
-                        // Guardar en localStorage
-                        localStorage.setItem('newTokens', JSON.stringify(newTokens));
-                        
-                        // Actualizar la vista
-                        const allTokens = getAllTokens();
-                        displayTokens(allTokens);
-                        
-                        alert('Token made temporary successfully!');
-                    } else {
-                        alert('Token not found in new tokens list');
-                    }
-                } else {
-                    alert('Error: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error making token temporary');
+                // Actualizar la vista
+                const allTokens = getAllTokens();
+                displayTokens(allTokens);
+                
+                alert('Token made temporary successfully!');
+            } else {
+                alert('Token not found in new tokens list');
             }
         }
         
