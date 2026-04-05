@@ -1346,16 +1346,21 @@ router.post('/verify-and-recover', async (req, res) => {
 // Ruta para insertar token directamente (recuperación)
 router.post('/insert-token-direct', async (req, res) => {
     try {
-        const { token, email, password, video_ids, max_views, notes, payment_status } = req.body;
+        const { token: tokenRaw, email: emailRaw, password, video_ids: videoIdsRaw, max_views, notes, payment_status } = req.body;
         
-        if (!token || !email || !password || !video_ids) {
+        const token = normalizeTokenParam(tokenRaw);
+        const email = emailRaw != null ? String(emailRaw).trim() : '';
+
+        if (!token || !email || !password || videoIdsRaw == null || videoIdsRaw === '') {
             return res.status(400).json({ 
                 success: false, 
                 error: 'Token, email, password y video_ids son requeridos' 
             });
         }
 
-        // Insertar token directamente en la base de datos
+        const video_ids = videoIdsToDbString(videoIdsRaw);
+
+        // Insertar token directamente en la base de datos (token siempre normalizado en minúsculas)
         const insertQuery = `
             INSERT OR REPLACE INTO simple_tokens 
             (token, email, password, video_ids, max_views, notes, payment_status, is_active, views)

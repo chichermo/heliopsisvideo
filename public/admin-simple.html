@@ -785,6 +785,34 @@
                 Los tokens siguen guardados en el <strong>servidor</strong> (SQLite). Los cambios del reproductor no borran la base de datos.
                 Si creaste algunos tokens solo en un PC y quedaron en la memoria del navegador, usa <strong>Importar desde este navegador</strong> en cada equipo donde generaste enlaces (una vez por navegador).
             </p>
+            
+            <div class="recover-box" style="margin:0 0 24px;padding:22px;border-radius:16px;border:1px solid rgba(255,200,100,0.45);background:rgba(255,165,40,0.07);max-width:820px;">
+                <h4 style="margin-bottom:10px;font-size:1.1em;"><i class="fas fa-life-ring"></i> Recuperar enlace en el servidor</h4>
+                <p style="opacity:0.92;font-size:0.9em;margin-bottom:16px;line-height:1.45;">
+                    Si el cliente ve <strong>«no está registrado en el servidor»</strong> con un enlace antiguo, el token <em>no está</em> en la base de datos de Render (p. ej. disco reiniciado o nunca se subió). Pega aquí el código de la URL (<code>/watch-simple/</code><strong>...</strong>), el email del cliente y una contraseña (puede ser nueva; comunícasela tú).
+                </p>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Token (hex de la URL, sin barras)</label>
+                    <input type="text" id="recoverToken" placeholder="ej. b32d656004596465c74d3d1b92c03f66" style="width:100%;max-width:520px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;font-family:monospace;font-size:0.95em;">
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Email del cliente</label>
+                    <input type="email" id="recoverEmail" placeholder="correo@ejemplo.com" style="width:100%;max-width:520px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;">
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Contraseña del reproductor</label>
+                    <input type="text" id="recoverPassword" placeholder="Ej. nueva contraseña de 8 caracteres" autocomplete="off" style="width:100%;max-width:520px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;">
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Video IDs (por defecto ambos DEEL)</label>
+                    <input type="text" id="recoverVideoIds" value="1-38V037fiJbvUytXNPhAtQQ10bPNeLnD,1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE" style="width:100%;max-width:720px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;font-family:monospace;font-size:0.85em;">
+                </div>
+                <button type="button" class="btn btn-primary" onclick="recoverLostLinkOnServer()">
+                    <i class="fas fa-save"></i> Guardar en el servidor
+                </button>
+                <div id="recoverResult" style="margin-top:14px;font-size:0.95em;line-height:1.4;"></div>
+            </div>
+            
             <div class="form-group" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
                 <button type="button" class="btn btn-primary" onclick="loadAllTokens()">
                     <i class="fas fa-refresh"></i> Refresh Token List
@@ -1111,6 +1139,47 @@
             } catch (err) {
                 console.error(err);
                 tokensList.innerHTML = '<div class="no-tokens"><p>Error de red. Abre el admin en la URL del servidor (https://…), no como archivo local.</p></div>';
+            }
+        }
+        
+        /** Registra de nuevo un enlace que existe en la URL pero no en el SQLite del servidor (p. ej. Render sin disco persistente). */
+        async function recoverLostLinkOnServer() {
+            const tokenEl = document.getElementById('recoverToken');
+            const emailEl = document.getElementById('recoverEmail');
+            const passEl = document.getElementById('recoverPassword');
+            const vidsEl = document.getElementById('recoverVideoIds');
+            const out = document.getElementById('recoverResult');
+            const token = (tokenEl && tokenEl.value) ? tokenEl.value.trim() : '';
+            const email = (emailEl && emailEl.value) ? emailEl.value.trim() : '';
+            const password = passEl ? passEl.value : '';
+            const video_ids = (vidsEl && vidsEl.value) ? vidsEl.value.trim() : '';
+            if (!token || !email || !password || !video_ids) {
+                out.innerHTML = '<span style="color:#ff8a8a">Rellena token, email, contraseña e IDs de vídeo.</span>';
+                return;
+            }
+            out.innerHTML = '<span style="color:#ccc">Guardando en el servidor…</span>';
+            try {
+                const response = await fetch('/api/video-simple/insert-token-direct', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token,
+                        email,
+                        password,
+                        video_ids,
+                        notes: 'Recuperado desde panel admin (enlace perdido en servidor)'
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    out.innerHTML = '<span style="color:#7dffb3">Listo. El cliente puede usar el <strong>mismo enlace</strong> (mismo token en la URL) y la contraseña que acabas de guardar.</span>';
+                    loadAllTokens();
+                } else {
+                    out.innerHTML = '<span style="color:#ff8a8a">' + (data.error || 'Error al guardar') + '</span>';
+                }
+            } catch (err) {
+                console.error(err);
+                out.innerHTML = '<span style="color:#ff8a8a">Error de red. Abre el admin en la misma URL del servidor (https://…).</span>';
             }
         }
         

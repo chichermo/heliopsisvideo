@@ -1007,7 +1007,11 @@
                     showSuccess('<i class="fas fa-check"></i> Access authorized');
                     loadVideoPlayer(data.data);
                 } else {
-                    const hint = (data.message && String(data.message)) || 'Credenciales incorrectas.';
+                    let hint = (data.message && String(data.message)) || 'Credenciales incorrectas.';
+                    if (data.error === 'not_found') {
+                        hint =
+                            'Este enlace no está dado de alta en el servidor. El administrador debe usar el panel Admin → pestaña «Token Management» → «Recuperar enlace en el servidor» (token + email + contraseña), o «Importar desde este navegador» si el token solo estaba en otro PC.';
+                    }
                     showError('<i class="fas fa-times"></i> ' + escapeHtml(hint));
                 }
             } catch (error) {
