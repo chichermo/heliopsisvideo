@@ -782,33 +782,33 @@
         <div id="manage" class="tab-content">
             <h3><i class="fas fa-cogs"></i> Token Management</h3>
             <p style="opacity:0.9;font-size:0.95em;margin-bottom:12px;max-width:720px;">
-                Los tokens siguen guardados en el <strong>servidor</strong> (SQLite). Los cambios del reproductor no borran la base de datos.
-                Si creaste algunos tokens solo en un PC y quedaron en la memoria del navegador, usa <strong>Importar desde este navegador</strong> en cada equipo donde generaste enlaces (una vez por navegador).
+                Tokens are stored on the <strong>server</strong> (SQLite). Player UI changes do not wipe the database.
+                If you generated some tokens only on one PC and they stayed in the browser, use <strong>Import from this browser</strong> once on each machine where you created links.
             </p>
             
             <div class="recover-box" style="margin:0 0 24px;padding:22px;border-radius:16px;border:1px solid rgba(255,200,100,0.45);background:rgba(255,165,40,0.07);max-width:820px;">
-                <h4 style="margin-bottom:10px;font-size:1.1em;"><i class="fas fa-life-ring"></i> Recuperar enlace en el servidor</h4>
+                <h4 style="margin-bottom:10px;font-size:1.1em;"><i class="fas fa-life-ring"></i> Recover link on the server</h4>
                 <p style="opacity:0.92;font-size:0.9em;margin-bottom:16px;line-height:1.45;">
-                    Si el cliente ve <strong>«no está registrado en el servidor»</strong> con un enlace antiguo, el token <em>no está</em> en la base de datos de Render (p. ej. disco reiniciado o nunca se subió). Pega aquí el código de la URL (<code>/watch-simple/</code><strong>...</strong>), el email del cliente y una contraseña (puede ser nueva; comunícasela tú).
+                    If a user sees <strong>“not registered on the server”</strong> with an old link, the token is <em>not</em> in the host database (e.g. disk reset or never uploaded). Paste the hex from the URL (<code>/watch-simple/</code><strong>...</strong>), the user’s email, and a player password (it can be new—send it to them yourself).
                 </p>
                 <div class="form-group" style="margin-bottom:12px;">
-                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Token (hex de la URL, sin barras)</label>
-                    <input type="text" id="recoverToken" placeholder="ej. b32d656004596465c74d3d1b92c03f66" style="width:100%;max-width:520px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;font-family:monospace;font-size:0.95em;">
+                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Token (hex from URL, no slashes)</label>
+                    <input type="text" id="recoverToken" placeholder="e.g. b32d656004596465c74d3d1b92c03f66" style="width:100%;max-width:520px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;font-family:monospace;font-size:0.95em;">
                 </div>
                 <div class="form-group" style="margin-bottom:12px;">
-                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Email del cliente</label>
-                    <input type="email" id="recoverEmail" placeholder="correo@ejemplo.com" style="width:100%;max-width:520px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;">
+                    <label style="display:block;margin-bottom:6px;opacity:0.9;">User email</label>
+                    <input type="email" id="recoverEmail" placeholder="user@example.com" style="width:100%;max-width:520px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;">
                 </div>
                 <div class="form-group" style="margin-bottom:12px;">
-                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Contraseña del reproductor</label>
-                    <input type="text" id="recoverPassword" placeholder="Ej. nueva contraseña de 8 caracteres" autocomplete="off" style="width:100%;max-width:520px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;">
+                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Player password</label>
+                    <input type="text" id="recoverPassword" placeholder="e.g. new 8-character password" autocomplete="off" style="width:100%;max-width:520px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;">
                 </div>
                 <div class="form-group" style="margin-bottom:14px;">
-                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Video IDs (por defecto ambos DEEL)</label>
+                    <label style="display:block;margin-bottom:6px;opacity:0.9;">Video IDs (default: both DEEL)</label>
                     <input type="text" id="recoverVideoIds" value="1-38V037fiJbvUytXNPhAtQQ10bPNeLnD,1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE" style="width:100%;max-width:720px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.35);color:#fff;font-family:monospace;font-size:0.85em;">
                 </div>
                 <button type="button" class="btn btn-primary" onclick="recoverLostLinkOnServer()">
-                    <i class="fas fa-save"></i> Guardar en el servidor
+                    <i class="fas fa-save"></i> Save on server
                 </button>
                 <div id="recoverResult" style="margin-top:14px;font-size:0.95em;line-height:1.4;"></div>
             </div>
@@ -817,8 +817,8 @@
                 <button type="button" class="btn btn-primary" onclick="loadAllTokens()">
                     <i class="fas fa-refresh"></i> Refresh Token List
                 </button>
-                <button type="button" class="btn btn-secondary" onclick="importTokensFromThisBrowser()" title="Sube al servidor los tokens guardados en localStorage en este equipo">
-                    <i class="fas fa-upload"></i> Importar desde este navegador
+                <button type="button" class="btn btn-secondary" onclick="importTokensFromThisBrowser()" title="Upload tokens stored in this browser’s localStorage to the server">
+                    <i class="fas fa-upload"></i> Import from this browser
                 </button>
             </div>
             
@@ -900,13 +900,13 @@
             const email = document.getElementById('email').value;
             
             if (selectedVideos.length === 0) {
-                alert('Por favor selecciona al menos un video');
+                alert('Please select at least one video');
                 return;
             }
             
             const generateBtn = document.querySelector('#tokenForm .generate-btn');
             generateBtn.disabled = true;
-            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
             
             try {
                 const response = await fetch('/api/video-simple/create-simple', {
@@ -951,10 +951,10 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error al generar token');
+                alert('Error generating token');
             } finally {
                 generateBtn.disabled = false;
-                generateBtn.innerHTML = '<i class="fas fa-key"></i> Generar Token';
+                generateBtn.innerHTML = '<i class="fas fa-key"></i> Generate Token';
             }
         });
         
@@ -966,18 +966,18 @@
             const emails = emailsText.split('\n').map(email => email.trim()).filter(email => email);
             
             if (emails.length === 0) {
-                alert('Por favor ingresa al menos un email');
+                alert('Please enter at least one email');
                 return;
             }
             
             if (selectedVideosBulk.length === 0) {
-                alert('Por favor selecciona al menos un video');
+                alert('Please select at least one video');
                 return;
             }
             
             const generateBtn = document.querySelector('#bulkForm .generate-btn');
             generateBtn.disabled = true;
-            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
             
             try {
                 const response = await fetch('/api/video-simple/bulk-create-simple', {
@@ -998,9 +998,9 @@
                     const resultsList = document.getElementById('bulkResultsList');
                     resultsList.innerHTML = `
                         <div class="result-item">
-                            <strong>Procesados:</strong> ${data.data.total_processed} | 
-                            <strong>Exitosos:</strong> ${data.data.successful} | 
-                            <strong>Fallidos:</strong> ${data.data.failed}
+                            <strong>Processed:</strong> ${data.data.total_processed} | 
+                            <strong>Successful:</strong> ${data.data.successful} | 
+                            <strong>Failed:</strong> ${data.data.failed}
                         </div>
                     `;
                     
@@ -1010,7 +1010,7 @@
                         resultItem.innerHTML = `
                             <strong>${result.email}</strong><br>
                             Token: ${result.token}<br>
-                            Contraseña: <span class="password">${result.password}</span><br>
+                            Password: <span class="password">${result.password}</span><br>
                             Link: ${result.watchUrl}
                         `;
                         resultsList.appendChild(resultItem);
@@ -1041,10 +1041,10 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error al generar tokens masivos');
+                alert('Error generating bulk tokens');
             } finally {
                 generateBtn.disabled = false;
-                generateBtn.innerHTML = '<i class="fas fa-rocket"></i> Generar Tokens Masivos';
+                generateBtn.innerHTML = '<i class="fas fa-rocket"></i> Generate Bulk Tokens';
             }
         });
         
@@ -1072,7 +1072,7 @@
                     if (totalRevenueElement) totalRevenueElement.textContent = data.data.total_revenue || 0;
                 }
             } catch (error) {
-                console.error('Error cargando estadísticas:', error);
+                console.error('Error loading statistics:', error);
             }
         }
         
@@ -1090,17 +1090,17 @@
             
             navigator.clipboard.writeText(text).then(() => {
                 // Mostrar feedback simple
-                alert('✅ Copiado al portapapeles');
+                alert('✅ Copied to clipboard');
             }).catch(err => {
                 console.error('Error copiando:', err);
-                alert('Error al copiar al portapapeles');
+                alert('Error copying to clipboard');
             });
         }
         
         // Cargar estadísticas al inicio
         loadStats();
         
-        // Gestión: lista siempre desde el servidor (SQLite en Render = misma BD para todos los PCs y móviles)
+        // Management: list always from server (SQLite on Render = same DB for all PCs and phones)
         async function loadAllTokens() {
             const tokensList = document.getElementById('tokensList');
             tokensList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading tokens from server...</p></div>';
@@ -1110,7 +1110,7 @@
                 const data = await response.json();
                 
                 if (!data.success) {
-                    tokensList.innerHTML = `<div class="no-tokens"><p>Error: ${data.error || 'No se pudo cargar la lista'}</p></div>`;
+                    tokensList.innerHTML = `<div class="no-tokens"><p>Error: ${data.error || 'Could not load the list'}</p></div>`;
                     return;
                 }
                 
@@ -1131,14 +1131,14 @@
                 }));
                 
                 if (normalized.length === 0) {
-                    tokensList.innerHTML = '<div class="no-tokens"><p>No hay tokens en la base de datos.</p></div>';
+                    tokensList.innerHTML = '<div class="no-tokens"><p>No tokens in the database.</p></div>';
                     return;
                 }
                 
                 displayTokens(normalized);
             } catch (err) {
                 console.error(err);
-                tokensList.innerHTML = '<div class="no-tokens"><p>Error de red. Abre el admin en la URL del servidor (https://…), no como archivo local.</p></div>';
+                tokensList.innerHTML = '<div class="no-tokens"><p>Network error. Open the admin at your server URL (https://…), not as a local file.</p></div>';
             }
         }
         
@@ -1154,10 +1154,10 @@
             const password = passEl ? passEl.value : '';
             const video_ids = (vidsEl && vidsEl.value) ? vidsEl.value.trim() : '';
             if (!token || !email || !password || !video_ids) {
-                out.innerHTML = '<span style="color:#ff8a8a">Rellena token, email, contraseña e IDs de vídeo.</span>';
+                out.innerHTML = '<span style="color:#ff8a8a">Fill in token, email, password, and video IDs.</span>';
                 return;
             }
-            out.innerHTML = '<span style="color:#ccc">Guardando en el servidor…</span>';
+            out.innerHTML = '<span style="color:#ccc">Saving on server…</span>';
             try {
                 const response = await fetch('/api/video-simple/insert-token-direct', {
                     method: 'POST',
@@ -1167,19 +1167,19 @@
                         email,
                         password,
                         video_ids,
-                        notes: 'Recuperado desde panel admin (enlace perdido en servidor)'
+                        notes: 'Recovered from admin panel (link missing on server)'
                     })
                 });
                 const data = await response.json();
                 if (data.success) {
-                    out.innerHTML = '<span style="color:#7dffb3">Listo. El cliente puede usar el <strong>mismo enlace</strong> (mismo token en la URL) y la contraseña que acabas de guardar.</span>';
+                    out.innerHTML = '<span style="color:#7dffb3">Done. The user can keep using the <strong>same link</strong> (same token in the URL) and the password you just saved.</span>';
                     loadAllTokens();
                 } else {
-                    out.innerHTML = '<span style="color:#ff8a8a">' + (data.error || 'Error al guardar') + '</span>';
+                    out.innerHTML = '<span style="color:#ff8a8a">' + (data.error || 'Error saving') + '</span>';
                 }
             } catch (err) {
                 console.error(err);
-                out.innerHTML = '<span style="color:#ff8a8a">Error de red. Abre el admin en la misma URL del servidor (https://…).</span>';
+                out.innerHTML = '<span style="color:#ff8a8a">Network error. Open the admin at the same server URL (https://…).</span>';
             }
         }
         
@@ -1189,25 +1189,25 @@
             try {
                 raw = localStorage.getItem('newTokens');
             } catch (e) {
-                alert('No se puede leer el almacenamiento del navegador.');
+                alert('Cannot read this browser’s storage.');
                 return;
             }
             if (!raw || raw === '[]') {
-                alert('En este navegador no hay lista "newTokens" para importar. Si ya usabas solo el servidor, no hace falta.');
+                alert('This browser has no "newTokens" list to import. If you only ever used the server, you can skip this.');
                 return;
             }
             let arr;
             try {
                 arr = JSON.parse(raw);
             } catch (e) {
-                alert('Datos en localStorage inválidos.');
+                alert('Invalid localStorage data.');
                 return;
             }
             if (!Array.isArray(arr) || arr.length === 0) {
-                alert('No hay entradas para importar.');
+                alert('No entries to import.');
                 return;
             }
-            if (!confirm(`Se enviarán ${arr.length} tokens al servidor. Los que ya existan no se modificarán (no se pierden vistas ni contraseñas del servidor). ¿Continuar?`)) {
+            if (!confirm(`This will send ${arr.length} tokens to the server. Existing tokens will not be changed (server view counts and passwords stay as they are). Continue?`)) {
                 return;
             }
             const payload = {
@@ -1228,20 +1228,20 @@
                 });
                 const data = await response.json();
                 if (!data.success) {
-                    alert('Error: ' + (data.error || 'desconocido'));
+                    alert('Error: ' + (data.error || 'unknown'));
                     return;
                 }
                 const d = data.data || {};
-                let msg = `Importación terminada.\n\nInsertados: ${d.inserted || 0}\nYa existían (sin tocar): ${d.skipped || 0}`;
+                let msg = `Import finished.\n\nInserted: ${d.inserted || 0}\nAlready existed (unchanged): ${d.skipped || 0}`;
                 if (d.errors && d.errors.length) {
-                    msg += `\nErrores: ${d.errors.length} (revisa consola).`;
+                    msg += `\nErrors: ${d.errors.length} (see console).`;
                     console.warn(d.errors);
                 }
                 alert(msg);
                 loadAllTokens();
             } catch (e) {
                 console.error(e);
-                alert('Error de red al importar.');
+                alert('Network error while importing.');
             }
         }
         

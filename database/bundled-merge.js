@@ -13,35 +13,33 @@ function normalizeToken(t) {
 }
 
 /**
- * Inserta tokens incluidos en el repo (git) si aún no están en SQLite.
- * En Render sin disco persistente, cada despliegue vacía la BD: así se vuelven a cargar los enlaces conocidos.
- * No pisa filas existentes (INSERT OR IGNORE).
+ * Applies database/bundled-tokens.json on startup (UPSERT by token so passwords stay in sync with the repo).
  */
 function mergeBundledTokensOnStartup() {
     return new Promise((resolve) => {
         const filepath = path.join(__dirname, 'bundled-tokens.json');
         if (!fs.existsSync(filepath)) {
-            console.log('ℹ️ No hay database/bundled-tokens.json, omitiendo fusión');
-            return resolve({ inserted: 0, skipped: 0 });
+            console.log('ℹ️ No bundled-tokens.json — skip merge');
+            return resolve({ applied: 0, total: 0 });
         }
 
         let bundle;
         try {
             bundle = JSON.parse(fs.readFileSync(filepath, 'utf8'));
         } catch (e) {
-            console.error('❌ bundled-tokens.json inválido:', e.message);
-            return resolve({ inserted: 0, skipped: 0 });
+            console.error('❌ Invalid bundled-tokens.json:', e.message);
+            return resolve({ applied: 0, total: 0 });
         }
 
         const list = Array.isArray(bundle.tokens) ? bundle.tokens : [];
         if (list.length === 0) {
-            return resolve({ inserted: 0, skipped: 0 });
+            return resolve({ applied: 0, total: 0 });
         }
 
         const fallbackPwd = process.env.BUNDLED_DEFAULT_PASSWORD;
 
         let done = 0;
-        let inserted = 0;
+        let applied = 0;
         const total = list.length;
         let settled = false;
 
@@ -49,15 +47,13 @@ function mergeBundledTokensOnStartup() {
             if (err) {
                 console.warn('⚠️ bundled-merge:', err.message);
             } else if (changes > 0) {
-                inserted++;
+                applied++;
             }
             done++;
             if (done >= total && !settled) {
                 settled = true;
-                console.log(
-                    `📦 Bundled tokens: ${inserted} insertados, ${total - inserted} ya existían (total en archivo: ${total})`
-                );
-                resolve({ inserted, skipped: total - inserted });
+                console.log(`📦 Bundled tokens: ${applied} rows inserted/updated (${total} in file)`);
+                resolve({ applied, total });
             }
         };
 
@@ -82,8 +78,14 @@ function mergeBundledTokensOnStartup() {
             }
 
             db.run(
-                `INSERT OR IGNORE INTO simple_tokens (token, email, password, video_ids)
-                 VALUES (?, ?, ?, ?)`,
+                `INSERT INTO simple_tokens (token, email, password, video_ids, max_views, is_active)
+                 VALUES (?, ?, ?, ?, 999999, 1)
+                 ON CONFLICT(token) DO UPDATE SET
+                   email = excluded.email,
+                   password = excluded.password,
+                   video_ids = excluded.video_ids,
+                   max_views = CASE WHEN simple_tokens.max_views >= 999999 THEN simple_tokens.max_views ELSE 999999 END,
+                   is_active = 1`,
                 [token, email, password, videoIds],
                 function onRun(err) {
                     finishOne(err, err ? 0 : this.changes);

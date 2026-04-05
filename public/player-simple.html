@@ -641,8 +641,8 @@
         
         <!-- Formulario de Autenticación -->
         <div id="authForm" class="auth-form" style="display: none;">
-            <h3><i class="fas fa-lock"></i> Verificación de acceso</h3>
-            <p id="authFormHint">Introduce tu email y contraseña para acceder al contenido.</p>
+            <h3><i class="fas fa-lock"></i> Access verification</h3>
+            <p id="authFormHint">Enter your email and password to access the content.</p>
             
             <form id="loginForm" autocomplete="off">
                 <div class="form-group">
@@ -651,8 +651,8 @@
                 </div>
                 
                 <div class="form-group" id="passwordRow">
-                    <label for="password"><i class="fas fa-key"></i> Contraseña:</label>
-                    <input type="password" id="password" name="password" placeholder="Contraseña" required autocomplete="new-password">
+                    <label for="password"><i class="fas fa-key"></i> Password:</label>
+                    <input type="password" id="password" name="password" placeholder="Password" required autocomplete="new-password">
                 </div>
                 
                 <button type="submit" class="auth-btn"><i class="fas fa-check"></i> Verify Access</button>
@@ -709,7 +709,7 @@
         // Inicializar
         document.addEventListener('DOMContentLoaded', () => {
             // Inicialización sin popup de mantenimiento
-            console.log('🎬 Sistema inicializado');
+            console.log('🎬 Player initialized');
             
             checkAccess();
             setupKeyboardShortcuts();
@@ -838,7 +838,7 @@
             return String(t).trim().toLowerCase();
         }
         
-        /** Si este navegador es el del admin y el token sigue en localStorage, súbelo al servidor una vez. */
+        /** If this is the admin browser and the token is still in localStorage, upload it to the server once. */
         async function tryImportTokenFromAdminLocalStorageOnce() {
             try {
                 const raw = localStorage.getItem('newTokens');
@@ -864,56 +864,59 @@
         // Verificar acceso al token (servidor; opcional sincronía desde localStorage del admin)
         async function checkAccess() {
             try {
-                updateStatus('<i class="fas fa-search"></i> Verificando enlace...', 20);
+                updateStatus('<i class="fas fa-search"></i> Verifying link...', 20);
                 
                 console.log(`🔍 Frontend: Verifying token ${token}`);
                 
                 const enc = encodeURIComponent(token);
-                let response = await fetch(`/api/emergency-token/${enc}`);
-                console.log(`📡 Frontend: Emergency response status: ${response.status}`);
                 
-                let data = await response.json();
-                console.log(`📋 Frontend: Emergency response data:`, data);
-                
-                async function fetchCheckSimple() {
+                async function fetchCheckSimpleGet() {
                     const r = await fetch(`/api/video-simple/check-simple/${enc}`);
-                    console.log(`📡 Frontend: Database response status: ${r.status}`);
+                    console.log(`📡 Frontend: check-simple GET status: ${r.status}`);
                     return r.json();
                 }
                 
-                if (!data.success) {
-                    console.log(`🔄 Frontend: Token not found in emergency, trying database...`);
-                    data = await fetchCheckSimple();
-                    console.log(`📋 Frontend: Database response data:`, data);
-                    
-                    if (!data.success && data.error === 'not_found') {
-                        const synced = await tryImportTokenFromAdminLocalStorageOnce();
-                        if (synced) {
-                            console.log(`🔄 Frontend: Token importado desde localStorage, reintentando...`);
-                            data = await fetchCheckSimple();
-                            console.log(`📋 Frontend: Database response after import:`, data);
-                        }
+                /** Prefer SQLite (almost all tokens). Emergency GET only if still unknown (e.g. DB empty). */
+                let data = await fetchCheckSimpleGet();
+                console.log(`📋 Frontend: check-simple GET:`, data);
+                
+                if (!data.success && data.error === 'not_found') {
+                    const synced = await tryImportTokenFromAdminLocalStorageOnce();
+                    if (synced) {
+                        console.log(`🔄 Frontend: Token imported from localStorage, retrying check-simple...`);
+                        data = await fetchCheckSimpleGet();
+                        console.log(`📋 Frontend: check-simple after import:`, data);
+                    }
+                }
+                
+                if (!data.success && data.error === 'not_found') {
+                    const response = await fetch(`/api/emergency-token/${enc}`);
+                    console.log(`📡 Frontend: emergency-token GET status: ${response.status} (fallback)`);
+                    const emerg = await response.json();
+                    console.log(`📋 Frontend: emergency-token GET:`, emerg);
+                    if (emerg.success) {
+                        data = emerg;
                     }
                 }
                 
                 if (data.success) {
                     console.log(`✅ Frontend: Valid token, showing form`);
-                    updateStatus('<i class="fas fa-check"></i> Token válido', 60);
+                    updateStatus('<i class="fas fa-check"></i> Valid token', 60);
                     const hintEl = document.getElementById('authFormHint');
                     if (hintEl) {
-                        hintEl.textContent = 'Introduce tu email y contraseña para acceder al contenido.';
+                        hintEl.textContent = 'Enter your email and password to access the content.';
                     }
                     showEmailForm(data.data);
                 } else if (data.error === 'inactive' || data.error === 'legacy_inactive') {
-                    console.log(`❌ Frontend: Token inactivo o expirado`);
-                    const hint = (data.message && String(data.message)) || 'Este acceso está desactivado o expiró.';
+                    console.log(`❌ Frontend: Token inactive or expired`);
+                    const hint = (data.message && String(data.message)) || 'This access is disabled or has expired.';
                     showError('<i class="fas fa-times"></i> ' + escapeHtml(hint));
                 } else if (data.error === 'not_found') {
                     messageContainer.innerHTML = '';
-                    updateStatus('<i class="fas fa-lock"></i> Acceso', 70);
+                    updateStatus('<i class="fas fa-lock"></i> Access', 70);
                     const hintEl = document.getElementById('authFormHint');
                     if (hintEl) {
-                        hintEl.textContent = 'Si el enlace es correcto, introduce el email registrado (y la contraseña si tu acceso la tiene).';
+                        hintEl.textContent = 'If the link is correct, enter the registered email (and password if your access requires one).';
                     }
                     showEmailForm(
                         {
@@ -925,19 +928,19 @@
                     );
                 } else {
                     console.log(`❌ Frontend: Invalid token:`, data.error, data.message);
-                    const hint = (data.message && String(data.message)) || 'Enlace no válido o sin acceso.';
+                    const hint = (data.message && String(data.message)) || 'Invalid link or no access.';
                     showError('<i class="fas fa-times"></i> ' + escapeHtml(hint));
                 }
             } catch (error) {
                 console.error('❌ Frontend: Error verifying token:', error);
                 console.error('❌ Frontend: Error details:', error.message);
-                showError('<i class="fas fa-exclamation-triangle"></i> Error al verificar acceso');
+                showError('<i class="fas fa-exclamation-triangle"></i> Error verifying access');
             }
         }
         
         // Show email and password form
         function showEmailForm(tokenData, opts = {}) {
-            updateStatus('<i class="fas fa-lock"></i> Autenticación', 80);
+            updateStatus('<i class="fas fa-lock"></i> Authentication', 80);
             
             videoIds = tokenData.video_ids || [...DEFAULT_HELIOPSIS_VIDEO_IDS];
             authorizedEmail = tokenData.email != null ? tokenData.email : '';
@@ -971,35 +974,22 @@
             const tokenEnc = encodeURIComponent(token);
             
             try {
-                // Siempre validar contra el servidor (mismo comportamiento en PC y móvil).
-                let response = await fetch(`/api/emergency-token/${tokenEnc}`, {
+                // Validate with SQLite first (source of truth). Emergency POST only if token is absent from DB.
+                let response = await fetch(`/api/video-simple/check-simple/${tokenEnc}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        password: password
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
                 });
                 
                 let data = await response.json();
                 
-                // Si el sistema de emergencia falla, intentar base de datos
-                if (!data.success) {
-                    console.log(`🔄 Frontend: Invalid credentials in emergency, trying database...`);
-                    
-                    response = await fetch(`/api/video-simple/check-simple/${tokenEnc}`, {
+                if (!data.success && data.error === 'not_found') {
+                    console.log(`🔄 Frontend: check-simple POST not_found, trying emergency-token POST...`);
+                    response = await fetch(`/api/emergency-token/${tokenEnc}`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            email: email,
-                            password: password
-                        })
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
                     });
-                    
                     data = await response.json();
                 }
                 
@@ -1007,10 +997,10 @@
                     showSuccess('<i class="fas fa-check"></i> Access authorized');
                     loadVideoPlayer(data.data);
                 } else {
-                    let hint = (data.message && String(data.message)) || 'Credenciales incorrectas.';
+                    let hint = (data.message && String(data.message)) || 'Incorrect credentials.';
                     if (data.error === 'not_found') {
                         hint =
-                            'Este enlace no está dado de alta en el servidor. El administrador debe usar el panel Admin → pestaña «Token Management» → «Recuperar enlace en el servidor» (token + email + contraseña), o «Importar desde este navegador» si el token solo estaba en otro PC.';
+                            'This link is not registered on the server. The administrator should use Admin → Token Management → Recover link on the server (token + email + password), or Import from this browser if the token only existed on another PC.';
                     }
                     showError('<i class="fas fa-times"></i> ' + escapeHtml(hint));
                 }

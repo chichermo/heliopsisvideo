@@ -307,7 +307,7 @@ async function streamSimpleVideoForAuthorizedToken(req, res, token, videoId, qua
     }
     return res.status(500).json({
         success: false,
-        error: 'Servicio temporalmente no disponible',
+        error: 'Service temporarily unavailable',
     });
 }
 
@@ -332,9 +332,9 @@ function initSimpleTokensTable() {
     
     db.run(createTable, (err) => {
         if (err) {
-            console.error('Error creando tabla simple_tokens:', err);
+            console.error('Error creating simple_tokens table:', err);
         } else {
-            console.log('✅ Tabla simple_tokens lista');
+            console.log('✅ simple_tokens table ready');
             // Actualizar tokens existentes para que sean permanentes
             updateExistingTokensToPermanent();
         }
@@ -346,16 +346,19 @@ function updateExistingTokensToPermanent() {
     const updateQuery = `
         UPDATE simple_tokens 
         SET max_views = 999999, 
-            notes = 'Token permanente actualizado', 
+            notes = 'Permanent token updated', 
             payment_status = 'paid'
-        WHERE max_views < 999999 OR notes NOT LIKE '%permanente%'
+        WHERE max_views < 999999 OR (
+            lower(ifnull(notes,'')) NOT LIKE '%permanent%' AND
+            lower(ifnull(notes,'')) NOT LIKE '%permanente%'
+        )
     `;
     
     db.run(updateQuery, [], function(err) {
         if (err) {
-            console.error('Error actualizando tokens a permanentes:', err);
+            console.error('Error updating tokens to permanent:', err);
         } else {
-            console.log(`✅ ${this.changes} tokens actualizados a permanentes`);
+            console.log(`✅ ${this.changes} tokens updated to permanent`);
         }
     });
 }
@@ -371,7 +374,7 @@ router.post('/create-simple', async (req, res) => {
         if (!email || !video_ids) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Email y video_ids son requeridos' 
+                error: 'Email and video_ids are required' 
             });
         }
 
@@ -384,12 +387,12 @@ router.post('/create-simple', async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?)
         `;
         
-        db.run(insertQuery, [token, email, password, video_ids, 999999, 'Token permanente'], function(err) {
+        db.run(insertQuery, [token, email, password, video_ids, 999999, 'Permanent token'], function(err) {
             if (err) {
                 console.error('Error guardando token:', err);
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Error guardando token' 
+                    error: 'Error saving token' 
                 });
             }
             
@@ -415,7 +418,7 @@ router.post('/create-simple', async (req, res) => {
         console.error('Error creando token simple:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Error interno del servidor' 
+            error: 'Internal server error' 
         });
     }
 });
@@ -428,7 +431,7 @@ router.post('/bulk-create-simple', async (req, res) => {
         if (!emails || !video_ids) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Emails y video_ids son requeridos' 
+                error: 'Emails and video_ids are required' 
             });
         }
         
@@ -438,7 +441,7 @@ router.post('/bulk-create-simple', async (req, res) => {
         if (emailList.length === 0) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Lista de emails vacía' 
+                error: 'Email list is empty' 
             });
         }
         
@@ -458,7 +461,7 @@ router.post('/bulk-create-simple', async (req, res) => {
                 `;
                 
                 await new Promise((resolve, reject) => {
-                    db.run(insertQuery, [token, email, password, video_ids, 999999, 'Token permanente'], function(err) {
+                    db.run(insertQuery, [token, email, password, video_ids, 999999, 'Permanent token'], function(err) {
                         if (err) {
                             reject(err);
                         } else {
@@ -505,7 +508,7 @@ router.post('/bulk-create-simple', async (req, res) => {
         console.error('Error en carga masiva:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Error interno del servidor' 
+            error: 'Internal server error' 
         });
     }
 });
@@ -523,7 +526,7 @@ router.get('/check-simple/:token', async (req, res) => {
                 console.error('❌ Error verificando token:', err);
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Error verificando token' 
+                    error: 'Error verifying token' 
                 });
             }
             
@@ -535,7 +538,7 @@ router.get('/check-simple/:token', async (req, res) => {
                         console.error('❌ Error verificando token legacy:', errLegacy);
                         return res.status(500).json({
                             success: false,
-                            error: 'Error verificando token',
+                            error: 'Error verifying token',
                         });
                     }
                     if (legacy && !isLegacyAccessTokenValid(legacy)) {
@@ -543,7 +546,7 @@ router.get('/check-simple/:token', async (req, res) => {
                             success: false,
                             error: 'legacy_inactive',
                             message:
-                                'Este enlace antiguo expiró o ya no tiene vistas disponibles. Pide un enlace nuevo al administrador.',
+                                'This legacy link has expired or has no views left. Please request a new link from the administrator.',
                         });
                     }
                     if (!legacy) {
@@ -552,7 +555,7 @@ router.get('/check-simple/:token', async (req, res) => {
                             success: false,
                             error: 'not_found',
                             message:
-                                'Este enlace no está en el servidor. Si lo creaste en tu PC local, abre el panel en https://heliopsis-video.onrender.com/admin-simple y usa «Importar desde este navegador». Si el servicio se reinició sin disco persistente, hay que volver a dar de alta el token.',
+                                'This link is not registered on the server. Contact the administrator or open the admin panel to import or restore tokens.',
                         });
                     }
                     const p = legacyAccessPayload(legacy);
@@ -566,7 +569,7 @@ router.get('/check-simple/:token', async (req, res) => {
                             max_views: legacy.max_views,
                             is_permanent: p.is_permanent,
                             requires_password: p.requires_password,
-                            status: p.is_permanent ? 'permanente' : 'limitado',
+                            status: p.is_permanent ? 'permanent' : 'limited',
                             legacy_access_token: true,
                         },
                     });
@@ -578,7 +581,7 @@ router.get('/check-simple/:token', async (req, res) => {
                 return res.json({
                     success: false,
                     error: 'inactive',
-                    message: 'Este acceso fue desactivado. Contacte al administrador.'
+                    message: 'This access has been disabled. Contact the administrator.'
                 });
             }
             
@@ -599,7 +602,7 @@ router.get('/check-simple/:token', async (req, res) => {
                     max_views: row.max_views,
                     is_permanent: row.max_views >= 999999,
                     requires_password: true,
-                    status: row.max_views >= 999999 ? 'permanente' : 'limitado'
+                    status: row.max_views >= 999999 ? 'permanent' : 'limited'
                 }
             });
         });
@@ -609,7 +612,7 @@ router.get('/check-simple/:token', async (req, res) => {
         console.error('❌ Stack trace:', error.stack);
         res.status(500).json({ 
             success: false, 
-            error: 'Error interno del servidor' 
+            error: 'Internal server error' 
         });
     }
 });
@@ -630,7 +633,7 @@ router.post('/check-simple/:token', async (req, res) => {
                 console.error('❌ Error validando credenciales:', err);
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Error validando credenciales' 
+                    error: 'Error validating credentials' 
                 });
             }
             
@@ -642,7 +645,7 @@ router.post('/check-simple/:token', async (req, res) => {
                         console.error('❌ Error validando token legacy:', errLegacy);
                         return res.status(500).json({
                             success: false,
-                            error: 'Error validando credenciales',
+                            error: 'Error validating credentials',
                         });
                     }
                     if (legacy && !isLegacyAccessTokenValid(legacy)) {
@@ -650,7 +653,7 @@ router.post('/check-simple/:token', async (req, res) => {
                             success: false,
                             error: 'legacy_inactive',
                             message:
-                                'Este enlace antiguo expiró o ya no tiene vistas disponibles.',
+                                'This legacy link has expired or has no views left.',
                         });
                     }
                     if (!legacy) {
@@ -658,14 +661,14 @@ router.post('/check-simple/:token', async (req, res) => {
                         return res.json({
                             success: false,
                             error: 'not_found',
-                            message: 'Este enlace no está registrado en el servidor.',
+                            message: 'This link is not registered on the server.',
                         });
                     }
                     if (String(legacy.email || '').trim().toLowerCase() !== String(email || '').trim().toLowerCase()) {
                         return res.json({
                             success: false,
                             error: 'bad_credentials',
-                            message: 'El email no coincide con el de este acceso.',
+                            message: 'The email does not match the one on file for this access.',
                         });
                     }
                     return res.json({
@@ -684,7 +687,7 @@ router.post('/check-simple/:token', async (req, res) => {
                 return res.json({
                     success: false,
                     error: 'inactive',
-                    message: 'Este acceso fue desactivado. Contacte al administrador.'
+                    message: 'This access has been disabled. Contact the administrator.'
                 });
             }
             
@@ -694,7 +697,7 @@ router.post('/check-simple/:token', async (req, res) => {
                 return res.json({ 
                     success: false, 
                     error: 'bad_credentials',
-                    message: 'Email o contraseña incorrectos.'
+                    message: 'Incorrect email or password.'
                 });
             }
             
@@ -702,7 +705,7 @@ router.post('/check-simple/:token', async (req, res) => {
             if (row.max_views < 999999 && row.views >= row.max_views) {
                 return res.json({ 
                     success: false, 
-                    error: 'Límite de vistas alcanzado' 
+                    error: 'View limit reached' 
                 });
             }
             
@@ -721,7 +724,7 @@ router.post('/check-simple/:token', async (req, res) => {
         console.error('Error validando credenciales:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Error interno del servidor' 
+            error: 'Internal server error' 
         });
     }
 });
@@ -779,7 +782,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                 max_views: 999999,
                 is_permanent: true,
                 requires_password: true,
-                status: 'permanente'
+                status: 'permanent'
             },
             '6679c5eff294e2014ace94dc0fbf2ac5': {
                 email: 'shana.moyaert@hotmail.com',
@@ -789,7 +792,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                 max_views: 999999,
                 is_permanent: true,
                 requires_password: true,
-                status: 'permanente'
+                status: 'permanent'
             },
             '3e736c6f6eb01c7942fe52e841495877': {
                 email: 'johnnycoppejans@hotmail.com',
@@ -799,7 +802,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                 max_views: 999999,
                 is_permanent: true,
                 requires_password: true,
-                status: 'permanente'
+                status: 'permanent'
             },
             '2186025af95ed07d769ac7a493e469a7': {
                 email: 'Moens_Tamara@hotmail.com',
@@ -809,7 +812,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                 max_views: 999999,
                 is_permanent: true,
                 requires_password: true,
-                status: 'permanente'
+                status: 'permanent'
             }
         };
         
@@ -894,7 +897,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
             // Si falla todo, devolver error
             return res.status(500).json({ 
                 success: false, 
-                error: 'Servicio temporalmente no disponible' 
+                error: 'Service temporarily unavailable' 
             });
         }
         
@@ -905,7 +908,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                 console.error('Error verificando acceso:', err);
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Error verificando acceso' 
+                    error: 'Error verifying access' 
                 });
             }
             
@@ -915,20 +918,20 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                         console.error('Error verificando acceso legacy:', errLegacy);
                         return res.status(500).json({
                             success: false,
-                            error: 'Error verificando acceso',
+                            error: 'Error verifying access',
                         });
                     }
                     if (!legacy || !isLegacyAccessTokenValid(legacy)) {
                         return res.status(403).json({
                             success: false,
-                            error: 'Acceso denegado',
+                            error: 'Access denied',
                         });
                     }
                     const allowedLegacy = legacyVideoIdsFromAccessRow(legacy);
                     if (!allowedLegacy.includes(videoId)) {
                         return res.status(403).json({
                             success: false,
-                            error: 'Acceso denegado',
+                            error: 'Access denied',
                         });
                     }
                     if (!req.headers.range) {
@@ -948,7 +951,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
             if (!isTokenRowActive(row)) {
                 return res.status(403).json({
                     success: false,
-                    error: 'Token inactivo'
+                    error: 'Token inactive'
                 });
             }
             
@@ -956,7 +959,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
             if (row.max_views < 999999 && row.views >= row.max_views) {
                 return res.status(403).json({ 
                     success: false, 
-                    error: 'Límite de vistas alcanzado' 
+                    error: 'View limit reached' 
                 });
             }
             
@@ -976,7 +979,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
         console.error('Error en streaming simple:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Error interno del servidor' 
+            error: 'Internal server error' 
         });
     }
 });
@@ -992,7 +995,7 @@ router.get('/list-simple', async (req, res) => {
                 console.error('❌ Error verificando tabla:', err);
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Error verificando tabla' 
+                    error: 'Error verifying table' 
                 });
             }
             
@@ -1000,7 +1003,7 @@ router.get('/list-simple', async (req, res) => {
                 console.log('❌ La tabla simple_tokens no existe');
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Tabla simple_tokens no existe' 
+                    error: 'simple_tokens table does not exist' 
                 });
             }
             
@@ -1013,7 +1016,7 @@ router.get('/list-simple', async (req, res) => {
                     console.error('❌ Error contando tokens:', err);
                     return res.status(500).json({ 
                         success: false, 
-                        error: 'Error contando tokens' 
+                        error: 'Error counting tokens' 
                     });
                 }
                 
@@ -1024,7 +1027,7 @@ router.get('/list-simple', async (req, res) => {
                     return res.json({
                         success: true,
                         data: [],
-                        message: 'No hay tokens en la base de datos'
+                        message: 'No tokens in the database'
                     });
                 }
                 
@@ -1043,7 +1046,7 @@ router.get('/list-simple', async (req, res) => {
                         console.error('❌ Error en consulta completa:', err);
                         return res.status(500).json({ 
                             success: false, 
-                            error: 'Error en consulta completa' 
+                            error: 'Error running full query' 
                         });
                     }
                     
@@ -1061,7 +1064,7 @@ router.get('/list-simple', async (req, res) => {
                             max_views: row.max_views || 999999,
                             is_active: row.is_active === 1,
                             last_accessed: row.last_accessed || row.created_at,
-                            notes: row.notes || 'Token permanente',
+                            notes: row.notes || 'Permanent token',
                             payment_status: row.payment_status || 'completed',
                             is_permanent: (row.max_views || 999999) >= 999999,
                             access_link: `${req.protocol}://${req.get('host')}/watch-simple/${row.token}`,
@@ -1076,7 +1079,7 @@ router.get('/list-simple', async (req, res) => {
         console.error('❌ Error general en list-simple:', error);
         res.status(500).json({
             success: false,
-            error: 'Error interno del servidor',
+            error: 'Internal server error',
             message: error.message
         });
     }
@@ -1123,7 +1126,7 @@ router.get('/stats-simple', async (req, res) => {
         console.error('Error obteniendo estadísticas:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Error interno del servidor' 
+            error: 'Internal server error' 
         });
     }
 });
@@ -1244,7 +1247,7 @@ router.post('/verify-and-recover', async (req, res) => {
         if (!tokens || !Array.isArray(tokens)) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Se requiere un array de tokens' 
+                error: 'An array of tokens is required' 
             });
         }
 
@@ -1281,7 +1284,7 @@ router.post('/verify-and-recover', async (req, res) => {
                         password: 'recovered123', // Cambiar por password real
                         video_ids: '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD,1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE',
                         max_views: 999999,
-                        notes: 'Token perdido recuperado automáticamente',
+                        notes: 'Lost token auto-recovered',
                         payment_status: 'paid'
                     };
 
@@ -1338,7 +1341,7 @@ router.post('/verify-and-recover', async (req, res) => {
         console.error('Error verificando tokens:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Error interno del servidor' 
+            error: 'Internal server error' 
         });
     }
 });
@@ -1354,7 +1357,7 @@ router.post('/insert-token-direct', async (req, res) => {
         if (!token || !email || !password || videoIdsRaw == null || videoIdsRaw === '') {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Token, email, password y video_ids son requeridos' 
+                error: 'Token, email, password, and video_ids are required' 
             });
         }
 
@@ -1373,14 +1376,14 @@ router.post('/insert-token-direct', async (req, res) => {
             password, 
             video_ids, 
             max_views || 999999, 
-            notes || 'Token recuperado - Acceso permanente garantizado',
+            notes || 'Recovered token — permanent access',
             payment_status || 'paid'
         ], function(err) {
             if (err) {
                 console.error('Error insertando token directamente:', err);
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Error insertando token' 
+                    error: 'Error inserting token' 
                 });
             }
             
@@ -1388,7 +1391,7 @@ router.post('/insert-token-direct', async (req, res) => {
             
             res.json({
                 success: true,
-                message: 'Token insertado exitosamente',
+                message: 'Token inserted successfully',
                 data: {
                     token,
                     email,
@@ -1415,10 +1418,10 @@ router.post('/import-browser-tokens', async (req, res) => {
     try {
         const { tokens } = req.body;
         if (!Array.isArray(tokens) || tokens.length === 0) {
-            return res.status(400).json({ success: false, error: 'Se requiere un array tokens no vacío' });
+            return res.status(400).json({ success: false, error: 'A non-empty tokens array is required' });
         }
         if (tokens.length > 500) {
-            return res.status(400).json({ success: false, error: 'Máximo 500 tokens por petición' });
+            return res.status(400).json({ success: false, error: 'Maximum 500 tokens per request' });
         }
 
         const summary = { inserted: 0, skipped: 0, errors: [] };
@@ -1428,13 +1431,13 @@ router.post('/import-browser-tokens', async (req, res) => {
             const email = t.email && String(t.email).trim();
             const password = t.password != null ? String(t.password) : '';
             if (!token || !email || !password) {
-                summary.errors.push({ token: token || '(vacío)', reason: 'Faltan token, email o password' });
+                summary.errors.push({ token: token || '(empty)', reason: 'Missing token, email, or password' });
                 continue;
             }
 
             const video_ids = videoIdsToDbString(t.video_ids);
             const max_views = Math.min(Math.max(parseInt(t.max_views, 10) || 999999, 1), 999999999);
-            const notes = t.notes ? String(t.notes).slice(0, 500) : 'Importado desde navegador (localStorage)';
+            const notes = t.notes ? String(t.notes).slice(0, 500) : 'Imported from browser (localStorage)';
             const payment_status = (t.payment_status && String(t.payment_status).slice(0, 64)) || 'paid';
 
             try {
@@ -1470,7 +1473,7 @@ router.post('/import-browser-tokens', async (req, res) => {
         res.json({ success: true, data: summary });
     } catch (error) {
         console.error('import-browser-tokens:', error);
-        res.status(500).json({ success: false, error: 'Error interno del servidor' });
+        res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
 
@@ -1488,7 +1491,7 @@ router.get('/emergency-token/:token', (req, res) => {
             max_views: 999999,
             is_permanent: true,
             requires_password: true,
-            status: 'permanente'
+            status: 'permanent'
         },
         '2186025af95ed07d769ac7a493e469a7': {
             email: 'Moens_Tamara@hotmail.com',
@@ -1498,7 +1501,7 @@ router.get('/emergency-token/:token', (req, res) => {
             max_views: 999999,
             is_permanent: true,
             requires_password: true,
-            status: 'permanente'
+            status: 'permanent'
         }
     };
     
@@ -1518,7 +1521,7 @@ router.get('/emergency-token/:token', (req, res) => {
     } else {
         res.status(404).json({
             success: false,
-            error: 'Token de emergencia no encontrado'
+            error: 'Emergency token not found'
         });
     }
 });
@@ -1538,7 +1541,7 @@ router.put('/make-permanent/:token', async (req, res) => {
                 console.error('❌ Error verificando token:', err);
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Error verificando token' 
+                    error: 'Error verifying token' 
                 });
             }
             
@@ -1547,7 +1550,7 @@ router.put('/make-permanent/:token', async (req, res) => {
                 console.log(`⚠️ Token ${token} ya existe en base de datos, no se puede modificar`);
                 return res.json({ 
                     success: false, 
-                    error: 'Token ya existe en base de datos' 
+                    error: 'Token already exists in database' 
                 });
             }
             
@@ -1556,11 +1559,11 @@ router.put('/make-permanent/:token', async (req, res) => {
             
             res.json({
                 success: true,
-                message: 'Token marcado como permanente en frontend',
+                message: 'Token marked as permanent in the frontend',
                 data: {
                     token: token,
                     is_permanent: true,
-                    note: 'Este cambio se aplica solo en el frontend'
+                    note: 'This change applies only in the frontend'
                 }
             });
         });
@@ -1569,7 +1572,7 @@ router.put('/make-permanent/:token', async (req, res) => {
         console.error('❌ Error haciendo token permanente:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Error interno del servidor' 
+            error: 'Internal server error' 
         });
     }
 });
@@ -1589,7 +1592,7 @@ router.put('/make-temporary/:token', async (req, res) => {
                 console.error('❌ Error verificando token:', err);
                 return res.status(500).json({ 
                     success: false, 
-                    error: 'Error verificando token' 
+                    error: 'Error verifying token' 
                 });
             }
             
@@ -1598,7 +1601,7 @@ router.put('/make-temporary/:token', async (req, res) => {
                 console.log(`⚠️ Token ${token} ya existe en base de datos, no se puede modificar`);
                 return res.json({ 
                     success: false, 
-                    error: 'Token ya existe en base de datos' 
+                    error: 'Token already exists in database' 
                 });
             }
             
@@ -1607,11 +1610,11 @@ router.put('/make-temporary/:token', async (req, res) => {
             
             res.json({
                 success: true,
-                message: 'Token marcado como temporal en frontend',
+                message: 'Token marked as temporary in the frontend',
                 data: {
                     token: token,
                     is_permanent: false,
-                    note: 'Este cambio se aplica solo en el frontend'
+                    note: 'This change applies only in the frontend'
                 }
             });
         });
@@ -1620,7 +1623,7 @@ router.put('/make-temporary/:token', async (req, res) => {
         console.error('❌ Error haciendo token temporal:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Error interno del servidor' 
+            error: 'Internal server error' 
         });
     }
 });

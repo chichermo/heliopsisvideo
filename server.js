@@ -41,7 +41,7 @@ app.use(helmet({
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutos
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-    message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'
+    message: 'Too many requests from this IP. Please try again later.'
 });
 app.use('/api/', limiter);
 
@@ -102,7 +102,7 @@ app.get('/api/emergency-token/:token', (req, res) => {
             max_views: 999999,
             is_permanent: true,
             requires_password: true,
-            status: 'permanente'
+            status: 'permanent'
         },
         '2186025af95ed07d769ac7a493e469a7': {
             email: 'Moens_Tamara@hotmail.com',
@@ -112,7 +112,7 @@ app.get('/api/emergency-token/:token', (req, res) => {
             max_views: 999999,
             is_permanent: true,
             requires_password: true,
-            status: 'permanente'
+            status: 'permanent'
         }
     };
 
@@ -132,7 +132,7 @@ app.get('/api/emergency-token/:token', (req, res) => {
     } else {
         res.status(404).json({
             success: false,
-            error: 'Token de emergencia no encontrado'
+            error: 'Emergency token not found'
         });
     }
 });
@@ -151,7 +151,7 @@ app.post('/api/emergency-token/:token', (req, res) => {
             max_views: 999999,
             is_permanent: true,
             requires_password: true,
-            status: 'permanente'
+            status: 'permanent'
         },
         '2186025af95ed07d769ac7a493e469a7': {
             email: 'Moens_Tamara@hotmail.com',
@@ -161,7 +161,7 @@ app.post('/api/emergency-token/:token', (req, res) => {
             max_views: 999999,
             is_permanent: true,
             requires_password: true,
-            status: 'permanente'
+            status: 'permanent'
         }
     };
     
@@ -169,7 +169,7 @@ app.post('/api/emergency-token/:token', (req, res) => {
         if (password === emergencyTokens[token].password) {
             res.json({
                 success: true,
-                message: 'Credenciales válidas',
+                message: 'Credentials valid',
                 data: {
                     token,
                     email: emergencyTokens[token].email,
@@ -183,13 +183,13 @@ app.post('/api/emergency-token/:token', (req, res) => {
         } else {
             res.status(401).json({
                 success: false,
-                error: 'Credenciales inválidas'
+                error: 'Invalid credentials'
             });
         }
     } else {
         res.status(404).json({
             success: false,
-            error: 'Token de emergencia no encontrado'
+            error: 'Emergency token not found'
         });
     }
 });
@@ -273,10 +273,10 @@ app.post('/api/restore-exact-tokens', async (req, res) => {
                         999999,
                         1,
                         1,
-                        'permanente',
+                        'permanent',
                         1,
                         new Date().toISOString(),
-                        'Token restaurado',
+                        'Token restored',
                         'completed'
                     ], function(err) {
                         if (err) {
@@ -303,7 +303,7 @@ app.post('/api/restore-exact-tokens', async (req, res) => {
         
         res.json({
             success: true,
-            message: `Tokens restaurados: ${insertedCount} exitosos, ${errorCount} errores`,
+            message: `Tokens restored: ${insertedCount} successful, ${errorCount} errors`,
             inserted: insertedCount,
             errors: errorCount,
             total: exactTokens.length
@@ -325,14 +325,14 @@ app.post('/api/create-backup', async (req, res) => {
         const filepath = await createAutomaticBackup();
         res.json({
             success: true,
-            message: 'Backup creado exitosamente',
+            message: 'Backup created successfully',
             filepath: filepath
         });
     } catch (error) {
         console.error('❌ Error creando backup:', error);
         res.status(500).json({
             success: false,
-            error: 'Error creando backup',
+            error: 'Error creating backup',
             message: error.message
         });
     }
@@ -357,7 +357,7 @@ app.get('/api/list-backups', (req, res) => {
         console.error('❌ Error listando backups:', error);
         res.status(500).json({
             success: false,
-            error: 'Error listando backups',
+            error: 'Error listing backups',
             message: error.message
         });
     }
@@ -366,7 +366,7 @@ app.get('/api/list-backups', (req, res) => {
 // Ruta de inicio
 app.get('/', (req, res) => {
     res.json({
-        message: 'Sistema de Control de Acceso para Videos',
+        message: 'Video access control system',
         version: '1.0.0',
         endpoints: {
             admin: '/admin',
@@ -381,21 +381,21 @@ app.get('/', (req, res) => {
 app.use((err, req, res, next) => {
     console.error('Error:', err);
     res.status(500).json({
-        error: 'Error interno del servidor',
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Algo salió mal'
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
     });
 });
 
 // Ruta 404
 app.use('*', (req, res) => {
-    res.status(404).json({ error: 'Ruta no encontrada' });
+    res.status(404).json({ error: 'Route not found' });
 });
 
 // Iniciar servidor
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor funcionando en http://localhost:${PORT}`);
-    console.log(`📺 Panel de administración: http://localhost:${PORT}/admin`);
-    console.log(`🎥 Ejemplo de link: http://localhost:${PORT}/watch/tu-token-aqui`);
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
+    console.log(`📺 Admin panel: http://localhost:${PORT}/admin`);
+    console.log(`🎥 Example watch link: http://localhost:${PORT}/watch/your-token-here`);
 });
 
 module.exports = app;

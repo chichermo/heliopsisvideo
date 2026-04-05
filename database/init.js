@@ -12,9 +12,9 @@ if (!fs.existsSync(dbDir)) {
 // Conectar a la base de datos
 const db = new sqlite3.Database(dbFile, (err) => {
     if (err) {
-        console.error('❌ Error conectando a la base de datos:', err.message);
+        console.error('❌ Database connection error:', err.message);
     } else {
-        console.log('✅ Base de datos SQLite conectada:', dbFile);
+        console.log('✅ SQLite database connected:', dbFile);
         initDatabase();
     }
 });
@@ -77,7 +77,7 @@ function initDatabase() {
         FOREIGN KEY (token_id) REFERENCES access_tokens (id)
     )`);
 
-    console.log('✅ Tablas de base de datos creadas');
+    console.log('✅ Database tables ready');
 }
 
 module.exports = { db, initDatabase };

@@ -17,10 +17,10 @@ const initializeVimeo = () => {
         
         vimeoClient = new Vimeo(clientId, clientSecret, accessToken);
         
-        console.log('✅ Vimeo client inicializado correctamente');
+        console.log('✅ Vimeo client initialized');
         return true;
     } catch (error) {
-        console.error('❌ Error inicializando Vimeo:', error.message);
+        console.error('❌ Vimeo initialization error:', error.message);
         return false;
     }
 };
@@ -59,16 +59,16 @@ const verifyAccess = (req, videoId) => {
     );
     
     if (!isValidDomain) {
-        console.log('❌ Acceso denegado - dominio no autorizado:', referer);
+        console.log('❌ Access denied - unauthorized domain:', referer);
         return false;
     }
     
     if (!userToken) {
-        console.log('❌ Acceso denegado - token de usuario requerido');
+        console.log('❌ Access denied - user token required');
         return false;
     }
     
-    console.log('✅ Acceso autorizado para:', { videoId, userToken, referer });
+    console.log('✅ Access authorized for:', { videoId, userToken, referer });
     return true;
 };
 
@@ -80,7 +80,7 @@ const getVimeoVideoStream = async (videoId, userToken = null) => {
         const vimeoId = SECURE_VIDEO_MAPPING[videoId];
 
         if (!vimeoId) {
-            console.log('❌ Video ID no encontrado en Vimeo:', videoId);
+            console.log('❌ Video ID not found on Vimeo:', videoId);
             return null;
         }
 
@@ -114,7 +114,7 @@ const serveVimeoVideo = async (req, res, videoId) => {
         const vimeoResult = await getVimeoVideoStream(videoId);
 
         if (!vimeoResult || !vimeoResult.embedCode) {
-            return res.status(404).json({ error: 'Video no encontrado en Vimeo' });
+            return res.status(404).json({ error: 'Video not found on Vimeo' });
         }
 
         console.log('🔄 Sirviendo video de Vimeo usando embedding:', videoId);
@@ -130,7 +130,7 @@ const serveVimeoVideo = async (req, res, videoId) => {
     } catch (error) {
         console.error('❌ Error sirviendo video de Vimeo:', error);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Error interno del servidor' });
+            res.status(500).json({ error: 'Internal server error' });
         }
     }
 };
@@ -145,8 +145,8 @@ router.get('/secure-stream/:videoId', async (req, res) => {
         // Verificar acceso
         if (!verifyAccess(req, videoId)) {
             return res.status(403).json({ 
-                error: 'Acceso denegado', 
-                message: 'Token de usuario requerido y dominio autorizado' 
+                error: 'Access denied', 
+                message: 'User token required and domain must be authorized' 
             });
         }
         
@@ -154,7 +154,7 @@ router.get('/secure-stream/:videoId', async (req, res) => {
     } catch (error) {
         console.error('❌ Error en ruta de streaming seguro:', error);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Error interno del servidor' });
+            res.status(500).json({ error: 'Internal server error' });
         }
     }
 });
@@ -168,12 +168,12 @@ router.get('/secure-url/:videoId', async (req, res) => {
     
     try {
         if (!userToken) {
-            return res.status(400).json({ error: 'Token de usuario requerido' });
+            return res.status(400).json({ error: 'User token required' });
         }
         
         const vimeoId = SECURE_VIDEO_MAPPING[videoId];
         if (!vimeoId) {
-            return res.status(404).json({ error: 'Video no encontrado' });
+            return res.status(404).json({ error: 'Video not found' });
         }
         
         // Generar URL segura con parámetros de autenticación
@@ -187,7 +187,7 @@ router.get('/secure-url/:videoId', async (req, res) => {
         
     } catch (error) {
         console.error('❌ Error generando URL segura:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -202,7 +202,7 @@ router.get('/stream/:videoId', async (req, res) => {
     } catch (error) {
         console.error('❌ Error en ruta de streaming legacy:', error);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Error interno del servidor' });
+            res.status(500).json({ error: 'Internal server error' });
         }
     }
 });
