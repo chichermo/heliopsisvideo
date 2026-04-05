@@ -83,6 +83,53 @@ function legacyAccessPayload(row) {
     };
 }
 
+/** Misma normalización en rutas (trim + minúsculas para hex). */
+function normalizeTokenParam(raw) {
+    if (raw == null) return '';
+    return String(raw).trim().toLowerCase();
+}
+
+/**
+ * access_tokens puede guardar 16 hex (access/generate), 32 o 64 hex (tokens/create).
+ * El enlace /watch-simple/:token a veces lleva solo los primeros 32 de un token de 64.
+ */
+function findAccessTokenRowFlexible(tokenRaw, callback) {
+    const t = normalizeTokenParam(tokenRaw);
+    if (!t) return process.nextTick(() => callback(null, null));
+
+    db.get(
+        'SELECT * FROM access_tokens WHERE lower(trim(token)) = ? LIMIT 1',
+        [t],
+        (err, row) => {
+            if (err) return callback(err);
+            if (row) return callback(null, row);
+            if (t.length === 32) {
+                db.get(
+                    'SELECT * FROM access_tokens WHERE length(trim(token)) = 64 AND lower(substr(trim(token), 1, 32)) = ? LIMIT 1',
+                    [t],
+                    (e2, r2) => {
+                        if (e2) return callback(e2);
+                        return callback(null, r2 || null);
+                    }
+                );
+                return;
+            }
+            if (t.length === 16) {
+                db.get(
+                    'SELECT * FROM access_tokens WHERE length(trim(token)) = 64 AND lower(substr(trim(token), 1, 16)) = ? LIMIT 1',
+                    [t],
+                    (e3, r3) => {
+                        if (e3) return callback(e3);
+                        return callback(null, r3 || null);
+                    }
+                );
+                return;
+            }
+            callback(null, null);
+        }
+    );
+}
+
 // Función para generar token único
 function generateToken() {
     return crypto.randomBytes(16).toString('hex');
@@ -466,11 +513,12 @@ router.post('/bulk-create-simple', async (req, res) => {
 // Ruta para verificar token simple
 router.get('/check-simple/:token', async (req, res) => {
     try {
-        const { token } = req.params;
+        const { token: tokenRaw } = req.params;
+        const token = normalizeTokenParam(tokenRaw);
         
-        console.log(`🔍 Verificando token simple: ${token}`);
+        console.log(`🔍 Verificando token simple: ${tokenRaw} (normalizado: ${token})`);
         
-        db.get('SELECT * FROM simple_tokens WHERE token = ?', [token], (err, row) => {
+        db.get('SELECT * FROM simple_tokens WHERE lower(trim(token)) = ?', [token], (err, row) => {
             if (err) {
                 console.error('❌ Error verificando token:', err);
                 return res.status(500).json({ 
@@ -482,7 +530,7 @@ router.get('/check-simple/:token', async (req, res) => {
             console.log(`📋 Resultado de consulta:`, row);
             
             if (!row) {
-                return db.get('SELECT * FROM access_tokens WHERE token = ?', [token], (errLegacy, legacy) => {
+                return findAccessTokenRowFlexible(tokenRaw, (errLegacy, legacy) => {
                     if (errLegacy) {
                         console.error('❌ Error verificando token legacy:', errLegacy);
                         return res.status(500).json({
@@ -490,7 +538,15 @@ router.get('/check-simple/:token', async (req, res) => {
                             error: 'Error verificando token',
                         });
                     }
-                    if (!legacy || !isLegacyAccessTokenValid(legacy)) {
+                    if (legacy && !isLegacyAccessTokenValid(legacy)) {
+                        return res.json({
+                            success: false,
+                            error: 'legacy_inactive',
+                            message:
+                                'Este enlace antiguo expiró o ya no tiene vistas disponibles. Pide un enlace nuevo al administrador.',
+                        });
+                    }
+                    if (!legacy) {
                         console.log(`❌ Token ${token} no está en simple_tokens ni en access_tokens`);
                         return res.json({
                             success: false,
@@ -500,7 +556,7 @@ router.get('/check-simple/:token', async (req, res) => {
                         });
                     }
                     const p = legacyAccessPayload(legacy);
-                    console.log(`✅ Token legacy (access_tokens) válido: ${token}`);
+                    console.log(`✅ Token legacy (access_tokens) válido: fila token=${legacy.token}`);
                     return res.json({
                         success: true,
                         data: {
@@ -561,14 +617,15 @@ router.get('/check-simple/:token', async (req, res) => {
 // Ruta para validar email y contraseña
 router.post('/check-simple/:token', async (req, res) => {
     try {
-        const { token } = req.params;
+        const { token: tokenRaw } = req.params;
+        const token = normalizeTokenParam(tokenRaw);
         const { email, password } = req.body;
         
-        console.log(`🔍 POST check-simple - Token: ${token}`);
+        console.log(`🔍 POST check-simple - Token: ${tokenRaw}`);
         console.log(`📧 Email recibido: ${email}`);
         console.log(`🔑 Password recibido: ${password}`);
         
-        db.get('SELECT * FROM simple_tokens WHERE token = ?', [token], (err, row) => {
+        db.get('SELECT * FROM simple_tokens WHERE lower(trim(token)) = ?', [token], (err, row) => {
             if (err) {
                 console.error('❌ Error validando credenciales:', err);
                 return res.status(500).json({ 
@@ -580,7 +637,7 @@ router.post('/check-simple/:token', async (req, res) => {
             console.log(`📋 Resultado de consulta POST:`, row);
             
             if (!row) {
-                return db.get('SELECT * FROM access_tokens WHERE token = ?', [token], (errLegacy, legacy) => {
+                return findAccessTokenRowFlexible(tokenRaw, (errLegacy, legacy) => {
                     if (errLegacy) {
                         console.error('❌ Error validando token legacy:', errLegacy);
                         return res.status(500).json({
@@ -588,7 +645,15 @@ router.post('/check-simple/:token', async (req, res) => {
                             error: 'Error validando credenciales',
                         });
                     }
-                    if (!legacy || !isLegacyAccessTokenValid(legacy)) {
+                    if (legacy && !isLegacyAccessTokenValid(legacy)) {
+                        return res.json({
+                            success: false,
+                            error: 'legacy_inactive',
+                            message:
+                                'Este enlace antiguo expiró o ya no tiene vistas disponibles.',
+                        });
+                    }
+                    if (!legacy) {
                         console.log(`❌ Token ${token} no existe en simple_tokens ni access_tokens`);
                         return res.json({
                             success: false,
@@ -664,10 +729,12 @@ router.post('/check-simple/:token', async (req, res) => {
 // Ruta para streaming de video
 router.get('/stream-simple/:token/:videoId', async (req, res) => {
     try {
-        const { token, videoId } = req.params;
+        const tokenRaw = req.params.token;
+        const tokenNorm = normalizeTokenParam(tokenRaw);
+        const { videoId } = req.params;
         const { quality = '4K' } = req.query;
         
-        console.log(`🎥 Stream request - Token: ${token}, Video: ${videoId}, Quality: ${quality}`);
+        console.log(`🎥 Stream request - Token: ${tokenRaw} (norm: ${tokenNorm}), Video: ${videoId}, Quality: ${quality}`);
         
         // Detectar intentos de descarga
         const userAgent = req.headers['user-agent'] || '';
@@ -747,8 +814,8 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
         };
         
         // Verificar si es un token de emergencia
-        if (emergencyTokens[token] && emergencyTokens[token].video_ids.includes(videoId)) {
-            console.log(`🚨 EMERGENCY STREAM: Token ${token} válido para video ${videoId} en calidad ${quality}`);
+        if (emergencyTokens[tokenNorm] && emergencyTokens[tokenNorm].video_ids.includes(videoId)) {
+            console.log(`🚨 EMERGENCY STREAM: Token ${tokenNorm} válido para video ${videoId} en calidad ${quality}`);
             
             // Usar Vimeo como sistema principal (PROFESIONAL Y FUNCIONA)
             try {
@@ -831,9 +898,9 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
             });
         }
         
-        const query = 'SELECT * FROM simple_tokens WHERE token = ? AND video_ids LIKE ?';
+        const query = 'SELECT * FROM simple_tokens WHERE lower(trim(token)) = ? AND video_ids LIKE ?';
         
-        db.get(query, [token, `%${videoId}%`], async (err, row) => {
+        db.get(query, [tokenNorm, `%${videoId}%`], async (err, row) => {
             if (err) {
                 console.error('Error verificando acceso:', err);
                 return res.status(500).json({ 
@@ -843,7 +910,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
             }
             
             if (!row) {
-                return db.get('SELECT * FROM access_tokens WHERE token = ?', [token], async (errLegacy, legacy) => {
+                return findAccessTokenRowFlexible(tokenRaw, async (errLegacy, legacy) => {
                     if (errLegacy) {
                         console.error('Error verificando acceso legacy:', errLegacy);
                         return res.status(500).json({
@@ -867,14 +934,14 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                     if (!req.headers.range) {
                         db.run(
                             'UPDATE access_tokens SET current_views = current_views + 1 WHERE token = ?',
-                            [token],
+                            [legacy.token],
                             (e) => {
                                 if (e) console.error('Error actualizando vistas (legacy):', e);
                             }
                         );
-                        console.log(`📊 Vistas incrementadas (access_tokens) para ${token}`);
+                        console.log(`📊 Vistas incrementadas (access_tokens) para ${legacy.token}`);
                     }
-                    return streamSimpleVideoForAuthorizedToken(req, res, token, videoId, quality);
+                    return streamSimpleVideoForAuthorizedToken(req, res, tokenRaw, videoId, quality);
                 });
             }
             
@@ -895,14 +962,14 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
             
             // Solo incrementar vistas en la primera solicitud (sin Range header) y solo para estadísticas
             if (!req.headers.range) {
-                const updateQuery = 'UPDATE simple_tokens SET views = views + 1, last_accessed = CURRENT_TIMESTAMP WHERE token = ?';
-                db.run(updateQuery, [token], (err) => {
+                const updateQuery = 'UPDATE simple_tokens SET views = views + 1, last_accessed = CURRENT_TIMESTAMP WHERE lower(trim(token)) = ?';
+                db.run(updateQuery, [tokenNorm], (err) => {
                     if (err) console.error('Error actualizando vistas:', err);
                 });
-                console.log(`📊 Vistas incrementadas para ${token}: ${row.views + 1} (permanente)`);
+                console.log(`📊 Vistas incrementadas para ${tokenNorm}: ${row.views + 1} (permanente)`);
             }
 
-            return streamSimpleVideoForAuthorizedToken(req, res, token, videoId, quality);
+            return streamSimpleVideoForAuthorizedToken(req, res, tokenRaw, videoId, quality);
         });
         
     } catch (error) {
@@ -1367,10 +1434,14 @@ router.post('/import-browser-tokens', async (req, res) => {
 
             try {
                 const exists = await new Promise((resolve, reject) => {
-                    db.get('SELECT token FROM simple_tokens WHERE token = ?', [token], (err, row) => {
-                        if (err) reject(err);
-                        else resolve(!!row);
-                    });
+                    db.get(
+                        'SELECT token FROM simple_tokens WHERE lower(trim(token)) = ?',
+                        [normalizeTokenParam(token)],
+                        (err, row) => {
+                            if (err) reject(err);
+                            else resolve(!!row);
+                        }
+                    );
                 });
                 if (exists) {
                     summary.skipped++;

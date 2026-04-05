@@ -644,15 +644,15 @@
             <h3><i class="fas fa-lock"></i> Verificación de acceso</h3>
             <p id="authFormHint">Introduce tu email y contraseña para acceder al contenido.</p>
             
-            <form id="loginForm">
+            <form id="loginForm" autocomplete="off">
                 <div class="form-group">
                     <label for="email"><i class="fas fa-envelope"></i> Email:</label>
-                    <input type="email" id="email" name="email" placeholder="your@email.com" required>
+                    <input type="email" id="email" name="email" placeholder="your@email.com" required autocomplete="off">
                 </div>
                 
                 <div class="form-group" id="passwordRow">
                     <label for="password"><i class="fas fa-key"></i> Contraseña:</label>
-                    <input type="password" id="password" name="password" placeholder="Contraseña" required>
+                    <input type="password" id="password" name="password" placeholder="Contraseña" required autocomplete="new-password">
                 </div>
                 
                 <button type="submit" class="auth-btn"><i class="fas fa-check"></i> Verify Access</button>
@@ -833,32 +833,67 @@
             console.log('🛡️ Download protection activated (video-specific)');
         }
         
-        // Los tokens viven en el servidor (SQLite). No usar localStorage del admin aquí:
-        // en móvil u otro equipo no existe esa copia y el acceso fallaba con "Invalid or expired token".
+        function normalizeUrlToken(t) {
+            if (t == null || t === '') return '';
+            return String(t).trim().toLowerCase();
+        }
         
-        // Verificar acceso al token
+        /** Si este navegador es el del admin y el token sigue en localStorage, súbelo al servidor una vez. */
+        async function tryImportTokenFromAdminLocalStorageOnce() {
+            try {
+                const raw = localStorage.getItem('newTokens');
+                if (!raw) return false;
+                const arr = JSON.parse(raw);
+                if (!Array.isArray(arr)) return false;
+                const tn = normalizeUrlToken(token);
+                const hit = arr.find((x) => x && x.token && normalizeUrlToken(x.token) === tn);
+                if (!hit || !hit.email || !hit.password) return false;
+                const r = await fetch('/api/video-simple/import-browser-tokens', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tokens: [hit] }),
+                });
+                const j = await r.json();
+                return !!(j.success && j.data && j.data.inserted > 0);
+            } catch (e) {
+                console.warn('tryImportTokenFromAdminLocalStorageOnce:', e);
+                return false;
+            }
+        }
+        
+        // Verificar acceso al token (servidor; opcional sincronía desde localStorage del admin)
         async function checkAccess() {
             try {
-                updateStatus('<i class="fas fa-search"></i> Verifying token...', 20);
+                updateStatus('<i class="fas fa-search"></i> Verificando enlace...', 20);
                 
-                console.log(`🔍 Frontend: Verifying token ${token} (server only)`);
+                console.log(`🔍 Frontend: Verifying token ${token}`);
                 
-                // Emergencia (pocos tokens) + base de datos (todos los demás)
-                let response = await fetch(`/api/emergency-token/${token}`);
+                const enc = encodeURIComponent(token);
+                let response = await fetch(`/api/emergency-token/${enc}`);
                 console.log(`📡 Frontend: Emergency response status: ${response.status}`);
                 
                 let data = await response.json();
                 console.log(`📋 Frontend: Emergency response data:`, data);
                 
-                // Si el sistema de emergencia no encuentra el token, intentar base de datos
+                async function fetchCheckSimple() {
+                    const r = await fetch(`/api/video-simple/check-simple/${enc}`);
+                    console.log(`📡 Frontend: Database response status: ${r.status}`);
+                    return r.json();
+                }
+                
                 if (!data.success) {
                     console.log(`🔄 Frontend: Token not found in emergency, trying database...`);
-                    
-                    response = await fetch(`/api/video-simple/check-simple/${token}`);
-                    console.log(`📡 Frontend: Database response status: ${response.status}`);
-                    
-                    data = await response.json();
+                    data = await fetchCheckSimple();
                     console.log(`📋 Frontend: Database response data:`, data);
+                    
+                    if (!data.success && data.error === 'not_found') {
+                        const synced = await tryImportTokenFromAdminLocalStorageOnce();
+                        if (synced) {
+                            console.log(`🔄 Frontend: Token importado desde localStorage, reintentando...`);
+                            data = await fetchCheckSimple();
+                            console.log(`📋 Frontend: Database response after import:`, data);
+                        }
+                    }
                 }
                 
                 if (data.success) {
@@ -869,9 +904,9 @@
                         hintEl.textContent = 'Introduce tu email y contraseña para acceder al contenido.';
                     }
                     showEmailForm(data.data);
-                } else if (data.error === 'inactive') {
-                    console.log(`❌ Frontend: Token inactivo`);
-                    const hint = (data.message && String(data.message)) || 'Este acceso está desactivado.';
+                } else if (data.error === 'inactive' || data.error === 'legacy_inactive') {
+                    console.log(`❌ Frontend: Token inactivo o expirado`);
+                    const hint = (data.message && String(data.message)) || 'Este acceso está desactivado o expiró.';
                     showError('<i class="fas fa-times"></i> ' + escapeHtml(hint));
                 } else if (data.error === 'not_found') {
                     messageContainer.innerHTML = '';
@@ -896,7 +931,7 @@
             } catch (error) {
                 console.error('❌ Frontend: Error verifying token:', error);
                 console.error('❌ Frontend: Error details:', error.message);
-                showError('<i class="fas fa-exclamation-triangle"></i> Error verifying access');
+                showError('<i class="fas fa-exclamation-triangle"></i> Error al verificar acceso');
             }
         }
         
@@ -933,10 +968,11 @@
             
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const tokenEnc = encodeURIComponent(token);
             
             try {
                 // Siempre validar contra el servidor (mismo comportamiento en PC y móvil).
-                let response = await fetch(`/api/emergency-token/${token}`, {
+                let response = await fetch(`/api/emergency-token/${tokenEnc}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -953,7 +989,7 @@
                 if (!data.success) {
                     console.log(`🔄 Frontend: Invalid credentials in emergency, trying database...`);
                     
-                    response = await fetch(`/api/video-simple/check-simple/${token}`, {
+                    response = await fetch(`/api/video-simple/check-simple/${tokenEnc}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1162,7 +1198,7 @@
         function loadVideoWithGoogleDriveFallback(videoId, videoName) {
             console.log('🔄 Usando Google Drive como fallback...');
             
-            const videoUrl = `/api/video-simple/stream-simple/${token}/${videoId}`;
+            const videoUrl = `/api/video-simple/stream-simple/${encodeURIComponent(token)}/${encodeURIComponent(videoId)}`;
             console.log(`🔗 Google Drive URL: ${videoUrl}`);
             
             // Mostrar el elemento video
