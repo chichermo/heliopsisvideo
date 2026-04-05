@@ -78,12 +78,24 @@ class TokenBackupManager {
                 
                 try {
                     const backup = JSON.parse(data);
-                    console.log(`🔄 Restaurando ${backup.count} tokens desde backup...`);
-                    
+                    const tokenList = Array.isArray(backup.tokens) ? backup.tokens : [];
+                    const declared =
+                        typeof backup.count === 'number'
+                            ? backup.count
+                            : typeof backup.total_tokens === 'number'
+                              ? backup.total_tokens
+                              : tokenList.length;
+                    console.log(`🔄 Archivo backup: ${declared} declarados, ${tokenList.length} entradas en array...`);
+
+                    if (tokenList.length === 0) {
+                        console.log('⚠️ Backup sin tokens, se omite');
+                        return resolve({ restored: 0, errors: 0 });
+                    }
+
                     let restored = 0;
                     let errors = 0;
-                    
-                    backup.tokens.forEach((tokenData, index) => {
+
+                    tokenList.forEach((tokenData) => {
                         const insertSQL = `
                             INSERT OR REPLACE INTO simple_tokens 
                             (token, email, password, video_ids, views, max_views, is_permanent, 
@@ -91,37 +103,42 @@ class TokenBackupManager {
                              created_at, last_accessed)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         `;
-                        
-                        db.run(insertSQL, [
-                            tokenData.token,
-                            tokenData.email,
-                            tokenData.password,
-                            tokenData.video_ids,
-                            tokenData.views,
-                            tokenData.max_views,
-                            tokenData.is_permanent,
-                            tokenData.requires_password,
-                            tokenData.status,
-                            tokenData.is_active,
-                            tokenData.notes,
-                            tokenData.payment_status,
-                            tokenData.created_at,
-                            tokenData.last_accessed
-                        ], (err) => {
-                            if (err) {
-                                console.error(`❌ Error restaurando token ${tokenData.token}:`, err);
-                                errors++;
-                            } else {
-                                restored++;
+
+                        db.run(
+                            insertSQL,
+                            [
+                                tokenData.token,
+                                tokenData.email,
+                                tokenData.password,
+                                tokenData.video_ids,
+                                tokenData.views,
+                                tokenData.max_views,
+                                tokenData.is_permanent,
+                                tokenData.requires_password,
+                                tokenData.status,
+                                tokenData.is_active,
+                                tokenData.notes,
+                                tokenData.payment_status,
+                                tokenData.created_at,
+                                tokenData.last_accessed,
+                            ],
+                            (err) => {
+                                if (err) {
+                                    console.error(`❌ Error restaurando token ${tokenData.token}:`, err);
+                                    errors++;
+                                } else {
+                                    restored++;
+                                }
+
+                                if (restored + errors === tokenList.length) {
+                                    console.log(
+                                        `✅ Restauración completada: ${restored} tokens restaurados, ${errors} errores`
+                                    );
+                                    resolve({ restored, errors });
+                                }
                             }
-                            
-                            if (restored + errors === backup.tokens.length) {
-                                console.log(`✅ Restauración completada: ${restored} tokens restaurados, ${errors} errores`);
-                                resolve({ restored, errors });
-                            }
-                        });
+                        );
                     });
-                    
                 } catch (parseError) {
                     console.error('❌ Error parseando backup:', parseError);
                     reject(parseError);
@@ -134,7 +151,11 @@ class TokenBackupManager {
     getAvailableBackups() {
         try {
             const files = fs.readdirSync(this.backupDir)
-                .filter(file => file.startsWith('tokens_backup_') && file.endsWith('.json'))
+                .filter(
+                    (file) =>
+                        file.endsWith('.json') &&
+                        (file.startsWith('tokens_backup_') || file.startsWith('tokens-backup-'))
+                )
                 .map(file => {
                     const filepath = path.join(this.backupDir, file);
                     const stats = fs.statSync(filepath);
@@ -191,18 +212,27 @@ async function createAutomaticBackup() {
 async function restoreFromLatestBackup() {
     try {
         const backups = backupManager.getAvailableBackups();
-        
+
         if (backups.length === 0) {
-            console.log('⚠️ No hay backups disponibles');
+            console.log('⚠️ No hay archivos tokens_backup_*.json ni tokens-backup-*.json en /database/backups');
             return false;
         }
-        
-        const latestBackup = backups[0];
-        console.log(`🔄 Restaurando desde backup más reciente: ${latestBackup.filename}`);
-        
-        await backupManager.restoreFromBackup(latestBackup.filepath);
-        return true;
-        
+
+        for (const b of backups) {
+            try {
+                console.log(`🔄 Intentando backup: ${b.filename}`);
+                const { restored, errors } = await backupManager.restoreFromBackup(b.filepath);
+                if (restored > 0) {
+                    console.log(`✅ Restaurados ${restored} tokens desde ${b.filename} (${errors} errores)`);
+                    return true;
+                }
+            } catch (e) {
+                console.warn(`⚠️ No se pudo leer ${b.filename}:`, e.message);
+            }
+        }
+
+        console.log('⚠️ Ningún backup contenía tokens para restaurar');
+        return false;
     } catch (error) {
         console.error('❌ Error restaurando desde backup:', error);
         return false;

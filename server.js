@@ -56,23 +56,29 @@ initDatabase();
 // Inicializar tabla de tokens automáticamente
 const { initializeTokensTable } = require('./database/auto-init-tokens');
 const { createAutomaticBackup, restoreFromLatestBackup } = require('./database/backup-manager');
+const { mergeBundledTokensOnStartup } = require('./database/bundled-merge');
 
-// Script para migración forzada de todos los tokens (se ejecutará si es necesario)
-
+// Restaurar backups JSON, inicializar emergencias si hace falta y fusionar tokens empaquetados en git (sobreviven redeploys en Render).
 setTimeout(async () => {
-    // Primero intentar restaurar desde backup
-    const restored = await restoreFromLatestBackup();
-    
-    if (!restored) {
-        // Si no hay backup, inicializar tabla normalmente
-        initializeTokensTable();
+    try {
+        const restored = await restoreFromLatestBackup();
+        if (!restored) {
+            initializeTokensTable();
+        }
+        // Dar tiempo a que auto-init inserte tokens de emergencia (callbacks asíncronos)
+        await new Promise((r) => setTimeout(r, 2500));
+        await mergeBundledTokensOnStartup();
+    } catch (e) {
+        console.error('❌ Secuencia de restauración / bundled-merge:', e);
     }
-    
-    // Crear backup inicial
     setTimeout(async () => {
-        await createAutomaticBackup();
-    }, 5000);
-}, 2000); // Esperar 2 segundos para que la base de datos se inicialice
+        try {
+            await createAutomaticBackup();
+        } catch (e) {
+            console.error('❌ Backup automático:', e);
+        }
+    }, 4000);
+}, 2000);
 
 // Rutas de la API
 app.use('/api/googledrive', googledriveRoutes);
