@@ -46,6 +46,43 @@ function isTokenRowActive(row) {
     return Number(v) !== 0;
 }
 
+const DEFAULT_HELIOPSIS_VIDEO_IDS = [
+    '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD',
+    '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'
+];
+
+function isLegacyAccessTokenValid(row) {
+    if (!row) return false;
+    if (!isTokenRowActive(row)) return false;
+    if (row.expires_at && new Date(row.expires_at) < new Date()) return false;
+    const max = parseInt(row.max_views, 10) || 1;
+    const cur = parseInt(row.current_views, 10) || 0;
+    if (cur >= max) return false;
+    return true;
+}
+
+/** Lista de vídeos Heliopsis: el del token antiguo + los dos estándar (sin duplicar). */
+function legacyVideoIdsFromAccessRow(row) {
+    const out = [];
+    if (row.video_id) out.push(String(row.video_id).trim());
+    for (const id of DEFAULT_HELIOPSIS_VIDEO_IDS) {
+        if (!out.includes(id)) out.push(id);
+    }
+    return out;
+}
+
+function legacyAccessPayload(row) {
+    return {
+        email: row.email,
+        video_ids: legacyVideoIdsFromAccessRow(row),
+        views: row.current_views,
+        max_views: row.max_views,
+        is_permanent: (parseInt(row.max_views, 10) || 0) >= 999999,
+        requires_password: false,
+        legacy_access_token: true
+    };
+}
+
 // Función para generar token único
 function generateToken() {
     return crypto.randomBytes(16).toString('hex');
@@ -147,6 +184,84 @@ function getVideoQualityPath(videoId, quality = '4K') {
             original: originalPath
         };
     }
+}
+
+/** Vimeo / Drive / local: misma tubería para token simple o legacy access_tokens. */
+async function streamSimpleVideoForAuthorizedToken(req, res, token, videoId, quality) {
+    console.log(`🎬 Streaming simple para token: ${token} en calidad: ${quality}`);
+    try {
+        console.log('🔄 Obteniendo video desde Vimeo para token:', token);
+        const vimeoResult = await getVimeoVideoStream(videoId);
+        if (vimeoResult && vimeoResult.embedCode) {
+            console.log('✅ Vimeo embed obtenido para token:', token);
+            const { serveVimeoVideo } = require('./vimeo');
+            return await serveVimeoVideo(req, res, videoId);
+        }
+        console.log('❌ No se pudo obtener embed de Vimeo para token:', token);
+    } catch (error) {
+        console.error('❌ Error con Vimeo para token:', token, error);
+    }
+    try {
+        console.log('🔄 Intentando Google Drive como respaldo para token:', token);
+        const streamResult = await getGoogleDriveVideoStream(videoId);
+        if (streamResult && streamResult.stream) {
+            console.log('✅ Stream directo obtenido de Google Drive para token:', token);
+            res.setHeader('Content-Type', streamResult.mimeType || 'video/mp4');
+            res.setHeader('Accept-Ranges', 'bytes');
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+            res.setHeader('X-Download-Options', 'noopen');
+            res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+            res.setHeader('Content-Disposition', 'inline; filename=""');
+            res.setHeader('Content-Security-Policy', "default-src 'none'; media-src 'self' blob:;");
+            res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+            res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+            res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+            res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+            console.log('✅ Sirviendo stream directo de Google Drive para token:', token);
+            return streamResult.stream.pipe(res);
+        }
+    } catch (error) {
+        console.error('❌ Error con Google Drive para token:', token, error);
+    }
+    const qualityInfo = getVideoQualityPath(videoId, quality);
+    if (qualityInfo && qualityInfo.exists) {
+        console.log('🔄 Usando archivo local como fallback');
+        const videoPath = qualityInfo.path;
+        const stat = fs.statSync(videoPath);
+        const fileSize = stat.size;
+        const range = req.headers.range;
+        if (range) {
+            const parts = range.replace(/bytes=/, '').split('-');
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunksize = (end - start) + 1;
+            const file = fs.createReadStream(videoPath, { start, end });
+            const head = {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': 'video/mp4',
+            };
+            res.writeHead(206, head);
+            file.pipe(res);
+        } else {
+            const head = {
+                'Content-Length': fileSize,
+                'Content-Type': 'video/mp4',
+            };
+            res.writeHead(200, head);
+            fs.createReadStream(videoPath).pipe(res);
+        }
+        return;
+    }
+    return res.status(500).json({
+        success: false,
+        error: 'Servicio temporalmente no disponible',
+    });
 }
 
 // Crear tabla para tokens simples si no existe
@@ -367,11 +482,38 @@ router.get('/check-simple/:token', async (req, res) => {
             console.log(`📋 Resultado de consulta:`, row);
             
             if (!row) {
-                console.log(`❌ Token ${token} no está en simple_tokens (servidor Render)`);
-                return res.json({ 
-                    success: false, 
-                    error: 'not_found',
-                    message: 'Este enlace no está en el servidor. Si lo creaste en tu PC local, abre el panel en https://heliopsis-video.onrender.com/admin-simple y usa «Importar desde este navegador». Si el servicio se reinició sin disco persistente, hay que volver a dar de alta el token.'
+                return db.get('SELECT * FROM access_tokens WHERE token = ?', [token], (errLegacy, legacy) => {
+                    if (errLegacy) {
+                        console.error('❌ Error verificando token legacy:', errLegacy);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Error verificando token',
+                        });
+                    }
+                    if (!legacy || !isLegacyAccessTokenValid(legacy)) {
+                        console.log(`❌ Token ${token} no está en simple_tokens ni en access_tokens`);
+                        return res.json({
+                            success: false,
+                            error: 'not_found',
+                            message:
+                                'Este enlace no está en el servidor. Si lo creaste en tu PC local, abre el panel en https://heliopsis-video.onrender.com/admin-simple y usa «Importar desde este navegador». Si el servicio se reinició sin disco persistente, hay que volver a dar de alta el token.',
+                        });
+                    }
+                    const p = legacyAccessPayload(legacy);
+                    console.log(`✅ Token legacy (access_tokens) válido: ${token}`);
+                    return res.json({
+                        success: true,
+                        data: {
+                            email: p.email,
+                            video_ids: p.video_ids,
+                            views: legacy.current_views,
+                            max_views: legacy.max_views,
+                            is_permanent: p.is_permanent,
+                            requires_password: p.requires_password,
+                            status: p.is_permanent ? 'permanente' : 'limitado',
+                            legacy_access_token: true,
+                        },
+                    });
                 });
             }
             
@@ -438,11 +580,38 @@ router.post('/check-simple/:token', async (req, res) => {
             console.log(`📋 Resultado de consulta POST:`, row);
             
             if (!row) {
-                console.log(`❌ Token ${token} no existe en BD`);
-                return res.json({ 
-                    success: false, 
-                    error: 'not_found',
-                    message: 'Este enlace no está registrado en el servidor.'
+                return db.get('SELECT * FROM access_tokens WHERE token = ?', [token], (errLegacy, legacy) => {
+                    if (errLegacy) {
+                        console.error('❌ Error validando token legacy:', errLegacy);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Error validando credenciales',
+                        });
+                    }
+                    if (!legacy || !isLegacyAccessTokenValid(legacy)) {
+                        console.log(`❌ Token ${token} no existe en simple_tokens ni access_tokens`);
+                        return res.json({
+                            success: false,
+                            error: 'not_found',
+                            message: 'Este enlace no está registrado en el servidor.',
+                        });
+                    }
+                    if (String(legacy.email || '').trim().toLowerCase() !== String(email || '').trim().toLowerCase()) {
+                        return res.json({
+                            success: false,
+                            error: 'bad_credentials',
+                            message: 'El email no coincide con el de este acceso.',
+                        });
+                    }
+                    return res.json({
+                        success: true,
+                        data: {
+                            email: legacy.email,
+                            video_ids: legacyVideoIdsFromAccessRow(legacy),
+                            views: legacy.current_views,
+                            max_views: legacy.max_views,
+                        },
+                    });
                 });
             }
             
@@ -674,9 +843,38 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
             }
             
             if (!row) {
-                return res.status(403).json({ 
-                    success: false, 
-                    error: 'Acceso denegado' 
+                return db.get('SELECT * FROM access_tokens WHERE token = ?', [token], async (errLegacy, legacy) => {
+                    if (errLegacy) {
+                        console.error('Error verificando acceso legacy:', errLegacy);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Error verificando acceso',
+                        });
+                    }
+                    if (!legacy || !isLegacyAccessTokenValid(legacy)) {
+                        return res.status(403).json({
+                            success: false,
+                            error: 'Acceso denegado',
+                        });
+                    }
+                    const allowedLegacy = legacyVideoIdsFromAccessRow(legacy);
+                    if (!allowedLegacy.includes(videoId)) {
+                        return res.status(403).json({
+                            success: false,
+                            error: 'Acceso denegado',
+                        });
+                    }
+                    if (!req.headers.range) {
+                        db.run(
+                            'UPDATE access_tokens SET current_views = current_views + 1 WHERE token = ?',
+                            [token],
+                            (e) => {
+                                if (e) console.error('Error actualizando vistas (legacy):', e);
+                            }
+                        );
+                        console.log(`📊 Vistas incrementadas (access_tokens) para ${token}`);
+                    }
+                    return streamSimpleVideoForAuthorizedToken(req, res, token, videoId, quality);
                 });
             }
             
@@ -703,106 +901,8 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                 });
                 console.log(`📊 Vistas incrementadas para ${token}: ${row.views + 1} (permanente)`);
             }
-            
-            console.log(`🎬 Streaming simple para token: ${token} en calidad: ${quality}`);
-            
-            // Usar Vimeo como sistema principal para TODOS los tokens
-            try {
-                console.log('🔄 Obteniendo video desde Vimeo para token:', token);
-                const vimeoResult = await getVimeoVideoStream(videoId);
-                
-                if (vimeoResult && vimeoResult.embedCode) {
-                    console.log('✅ Vimeo embed obtenido para token:', token);
-                    
-                    // Servir el video de Vimeo usando embedding
-                    const { serveVimeoVideo } = require('./vimeo');
-                    return await serveVimeoVideo(req, res, videoId);
-                } else {
-                    console.log('❌ No se pudo obtener embed de Vimeo para token:', token);
-                }
-            } catch (error) {
-                console.error('❌ Error con Vimeo para token:', token, error);
-            }
-            
-            // Fallback: Intentar usar Google Drive como respaldo
-            try {
-                console.log('🔄 Intentando Google Drive como respaldo para token:', token);
-                const streamResult = await getGoogleDriveVideoStream(videoId);
-                
-                if (streamResult && streamResult.stream) {
-                    console.log('✅ Stream directo obtenido de Google Drive para token:', token);
-                    
-                    // Configurar headers para streaming de video
-                    res.setHeader('Content-Type', streamResult.mimeType || 'video/mp4');
-                    res.setHeader('Accept-Ranges', 'bytes');
-                    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-                    res.setHeader('Pragma', 'no-cache');
-                    res.setHeader('Expires', '0');
-                    res.setHeader('X-Content-Type-Options', 'nosniff');
-                    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-                    res.setHeader('X-Download-Options', 'noopen');
-                    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
 
-                    // Headers específicos para prevenir descarga
-                    res.setHeader('Content-Disposition', 'inline; filename=""');
-                    res.setHeader('Content-Security-Policy', "default-src 'none'; media-src 'self' blob:;");
-
-                    // Headers adicionales de seguridad
-                    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-                    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-                    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-
-                    // Prevenir hotlinking y descarga directa
-                    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-                    console.log('✅ Sirviendo stream directo de Google Drive para token:', token);
-                    return streamResult.stream.pipe(res);
-                }
-            } catch (error) {
-                console.error('❌ Error con Google Drive para token:', token, error);
-            }
-            
-            // Fallback: Intentar archivos locales (desarrollo)
-            const qualityInfo = getVideoQualityPath(videoId, quality);
-            if (qualityInfo && qualityInfo.exists) {
-                console.log('🔄 Usando archivo local como fallback');
-                
-                // Servir el archivo de video directamente
-                const videoPath = qualityInfo.path;
-                const stat = fs.statSync(videoPath);
-                const fileSize = stat.size;
-                const range = req.headers.range;
-                
-                if (range) {
-                    const parts = range.replace(/bytes=/, "").split("-");
-                    const start = parseInt(parts[0], 10);
-                    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-                    const chunksize = (end - start) + 1;
-                    const file = fs.createReadStream(videoPath, { start, end });
-                    const head = {
-                        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                        'Accept-Ranges': 'bytes',
-                        'Content-Length': chunksize,
-                        'Content-Type': 'video/mp4',
-                    };
-                    res.writeHead(206, head);
-                    file.pipe(res);
-                } else {
-                    const head = {
-                        'Content-Length': fileSize,
-                        'Content-Type': 'video/mp4',
-                    };
-                    res.writeHead(200, head);
-                    fs.createReadStream(videoPath).pipe(res);
-                }
-                return;
-            }
-            
-            // Si falla todo, devolver error
-            return res.status(500).json({ 
-                success: false, 
-                error: 'Servicio temporalmente no disponible' 
-            });
+            return streamSimpleVideoForAuthorizedToken(req, res, token, videoId, quality);
         });
         
     } catch (error) {

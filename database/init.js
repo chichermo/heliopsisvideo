@@ -1,19 +1,20 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-
-// Crear directorio de base de datos si no existe
-const dbDir = path.dirname('./database/access_tokens.db');
 const fs = require('fs');
+
+// Ruta única del SQLite: en Render puedes fijar SQLITE_DB_PATH a un volumen persistente (disco montado).
+const dbFile = process.env.SQLITE_DB_PATH || path.join(process.cwd(), 'database', 'access_tokens.db');
+const dbDir = path.dirname(dbFile);
 if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
 }
 
 // Conectar a la base de datos
-const db = new sqlite3.Database('./database/access_tokens.db', (err) => {
+const db = new sqlite3.Database(dbFile, (err) => {
     if (err) {
         console.error('❌ Error conectando a la base de datos:', err.message);
     } else {
-        console.log('✅ Base de datos SQLite conectada');
+        console.log('✅ Base de datos SQLite conectada:', dbFile);
         initDatabase();
     }
 });

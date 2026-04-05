@@ -641,8 +641,8 @@
         
         <!-- Formulario de Autenticación -->
         <div id="authForm" class="auth-form" style="display: none;">
-            <h3><i class="fas fa-lock"></i> Access Verification</h3>
-            <p>Please enter your email and password to access the content.</p>
+            <h3><i class="fas fa-lock"></i> Verificación de acceso</h3>
+            <p id="authFormHint">Introduce tu email y contraseña para acceder al contenido.</p>
             
             <form id="loginForm">
                 <div class="form-group">
@@ -650,9 +650,9 @@
                     <input type="email" id="email" name="email" placeholder="your@email.com" required>
                 </div>
                 
-                <div class="form-group">
-                    <label for="password"><i class="fas fa-key"></i> Password:</label>
-                    <input type="password" id="password" name="password" placeholder="Password" required>
+                <div class="form-group" id="passwordRow">
+                    <label for="password"><i class="fas fa-key"></i> Contraseña:</label>
+                    <input type="password" id="password" name="password" placeholder="Contraseña" required>
                 </div>
                 
                 <button type="submit" class="auth-btn"><i class="fas fa-check"></i> Verify Access</button>
@@ -688,6 +688,10 @@
     <script>
         // Obtener token de la URL
         const token = window.location.pathname.split('/').pop();
+        const DEFAULT_HELIOPSIS_VIDEO_IDS = [
+            '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD',
+            '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'
+        ];
         let currentVideoIndex = 0;
         let videoIds = [];
         let authorizedEmail = '';
@@ -859,10 +863,31 @@
                 
                 if (data.success) {
                     console.log(`✅ Frontend: Valid token, showing form`);
-                    updateStatus('<i class="fas fa-check"></i> Token valid', 60);
-                    
-                    // Show authentication form
+                    updateStatus('<i class="fas fa-check"></i> Token válido', 60);
+                    const hintEl = document.getElementById('authFormHint');
+                    if (hintEl) {
+                        hintEl.textContent = 'Introduce tu email y contraseña para acceder al contenido.';
+                    }
                     showEmailForm(data.data);
+                } else if (data.error === 'inactive') {
+                    console.log(`❌ Frontend: Token inactivo`);
+                    const hint = (data.message && String(data.message)) || 'Este acceso está desactivado.';
+                    showError('<i class="fas fa-times"></i> ' + escapeHtml(hint));
+                } else if (data.error === 'not_found') {
+                    messageContainer.innerHTML = '';
+                    updateStatus('<i class="fas fa-lock"></i> Acceso', 70);
+                    const hintEl = document.getElementById('authFormHint');
+                    if (hintEl) {
+                        hintEl.textContent = 'Si el enlace es correcto, introduce el email registrado (y la contraseña si tu acceso la tiene).';
+                    }
+                    showEmailForm(
+                        {
+                            email: '',
+                            video_ids: [...DEFAULT_HELIOPSIS_VIDEO_IDS],
+                            requires_password: true
+                        },
+                        { immediate: true }
+                    );
                 } else {
                     console.log(`❌ Frontend: Invalid token:`, data.error, data.message);
                     const hint = (data.message && String(data.message)) || 'Enlace no válido o sin acceso.';
@@ -876,16 +901,30 @@
         }
         
         // Show email and password form
-        function showEmailForm(tokenData) {
-            updateStatus('<i class="fas fa-lock"></i> Authentication required', 80);
+        function showEmailForm(tokenData, opts = {}) {
+            updateStatus('<i class="fas fa-lock"></i> Autenticación', 80);
             
-            videoIds = tokenData.video_ids;
-            authorizedEmail = tokenData.email;
+            videoIds = tokenData.video_ids || [...DEFAULT_HELIOPSIS_VIDEO_IDS];
+            authorizedEmail = tokenData.email != null ? tokenData.email : '';
             
+            const pwdRow = document.getElementById('passwordRow');
+            const pwdInput = document.getElementById('password');
+            if (pwdRow && pwdInput) {
+                if (tokenData.requires_password === false) {
+                    pwdRow.style.display = 'none';
+                    pwdInput.required = false;
+                    pwdInput.value = '';
+                } else {
+                    pwdRow.style.display = '';
+                    pwdInput.required = true;
+                }
+            }
+            
+            const delay = opts.immediate ? 0 : 1000;
             setTimeout(() => {
                 statusCard.style.display = 'none';
                 authForm.style.display = 'block';
-            }, 1000);
+            }, delay);
         }
         
         // Handle form submission
