@@ -866,7 +866,7 @@
                 } else {
                     console.log(`❌ Frontend: Invalid token:`, data.error, data.message);
                     const hint = (data.message && String(data.message)) || 'Enlace no válido o sin acceso.';
-                    showError('<i class="fas fa-times"></i> ' + hint);
+                    showError('<i class="fas fa-times"></i> ' + escapeHtml(hint));
                 }
             } catch (error) {
                 console.error('❌ Frontend: Error verifying token:', error);
@@ -933,7 +933,7 @@
                     loadVideoPlayer(data.data);
                 } else {
                     const hint = (data.message && String(data.message)) || 'Credenciales incorrectas.';
-                    showError('<i class="fas fa-times"></i> ' + hint);
+                    showError('<i class="fas fa-times"></i> ' + escapeHtml(hint));
                 }
             } catch (error) {
                 console.error('Error validating credentials:', error);
@@ -1401,9 +1401,20 @@
         }
         
         // Funciones de utilidad
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+        
         function updateStatus(message, progress) {
-            document.querySelector('.status-message').textContent = message;
-            document.getElementById('progressFill').style.width = progress + '%';
+            const statusEl = document.querySelector('.status-message');
+            if (statusEl) statusEl.innerHTML = message;
+            const progressFill = document.getElementById('progressFill');
+            if (progressFill) progressFill.style.width = progress + '%';
         }
         
         function showError(message) {
