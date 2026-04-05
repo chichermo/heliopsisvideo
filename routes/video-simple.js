@@ -12,6 +12,40 @@ const { db } = require('../database/init');
 
 const execAsync = promisify(exec);
 
+/** Acepta video_ids guardados como "id1,id2" o como JSON ["id1","id2"] (p. ej. tras migración). */
+function parseVideoIdsField(raw) {
+    if (raw == null || raw === '') return [];
+    const s = String(raw).trim();
+    if (s.startsWith('[')) {
+        try {
+            const arr = JSON.parse(s);
+            return Array.isArray(arr) ? arr.map(String) : [];
+        } catch {
+            /* continuar con split */
+        }
+    }
+    return s.split(',').map((id) => id.trim()).filter(Boolean);
+}
+
+const DEFAULT_VIDEO_IDS_CSV = '1-38V037fiJbvUytXNPhAtQQ10bPNeLnD,1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE';
+
+function videoIdsToDbString(raw) {
+    const ids = parseVideoIdsField(raw);
+    if (ids.length > 0) return ids.join(',');
+    return DEFAULT_VIDEO_IDS_CSV;
+}
+
+/** En SQLite is_active a veces es NULL (debe tratarse como activo). */
+function isTokenRowActive(row) {
+    if (!row) return false;
+    const v = row.is_active;
+    if (v === null || v === undefined) return true;
+    if (v === 1 || v === true) return true;
+    if (v === '1' || String(v).toLowerCase() === 'true') return true;
+    if (v === 0 || v === false || v === '0') return false;
+    return Number(v) !== 0;
+}
+
 // Función para generar token único
 function generateToken() {
     return crypto.randomBytes(16).toString('hex');
@@ -321,9 +355,7 @@ router.get('/check-simple/:token', async (req, res) => {
         
         console.log(`🔍 Verificando token simple: ${token}`);
         
-        const query = 'SELECT * FROM simple_tokens WHERE token = ? AND (is_active = 1 OR is_active = "1" OR is_active = true)';
-        
-        db.get(query, [token], (err, row) => {
+        db.get('SELECT * FROM simple_tokens WHERE token = ?', [token], (err, row) => {
             if (err) {
                 console.error('❌ Error verificando token:', err);
                 return res.status(500).json({ 
@@ -335,10 +367,20 @@ router.get('/check-simple/:token', async (req, res) => {
             console.log(`📋 Resultado de consulta:`, row);
             
             if (!row) {
-                console.log(`❌ Token ${token} no encontrado o inactivo`);
+                console.log(`❌ Token ${token} no está en simple_tokens (servidor Render)`);
                 return res.json({ 
                     success: false, 
-                    error: 'Token no encontrado o inactivo' 
+                    error: 'not_found',
+                    message: 'Este enlace no está en el servidor. Si lo creaste en tu PC local, abre el panel en https://heliopsis-video.onrender.com/admin-simple y usa «Importar desde este navegador». Si el servicio se reinició sin disco persistente, hay que volver a dar de alta el token.'
+                });
+            }
+            
+            if (!isTokenRowActive(row)) {
+                console.log(`❌ Token ${token} existe pero está inactivo`);
+                return res.json({
+                    success: false,
+                    error: 'inactive',
+                    message: 'Este acceso fue desactivado. Contacte al administrador.'
                 });
             }
             
@@ -354,7 +396,7 @@ router.get('/check-simple/:token', async (req, res) => {
                 success: true,
                 data: {
                     email: row.email,
-                    video_ids: row.video_ids.split(','),
+                    video_ids: parseVideoIdsField(row.video_ids),
                     views: row.views,
                     max_views: row.max_views,
                     is_permanent: row.max_views >= 999999,
@@ -384,9 +426,7 @@ router.post('/check-simple/:token', async (req, res) => {
         console.log(`📧 Email recibido: ${email}`);
         console.log(`🔑 Password recibido: ${password}`);
         
-        const query = 'SELECT * FROM simple_tokens WHERE token = ? AND email = ? AND password = ? AND (is_active = 1 OR is_active = "1" OR is_active = true)';
-        
-        db.get(query, [token, email, password], (err, row) => {
+        db.get('SELECT * FROM simple_tokens WHERE token = ?', [token], (err, row) => {
             if (err) {
                 console.error('❌ Error validando credenciales:', err);
                 return res.status(500).json({ 
@@ -398,15 +438,29 @@ router.post('/check-simple/:token', async (req, res) => {
             console.log(`📋 Resultado de consulta POST:`, row);
             
             if (!row) {
-                console.log(`❌ Credenciales no coinciden para token ${token}`);
-                console.log(`📧 Email esperado: usuario@ejemplo.com`);
-                console.log(`🔑 Password esperado: password123`);
-                console.log(`📧 Email recibido: ${email}`);
-                console.log(`🔑 Password recibido: ${password}`);
-                
+                console.log(`❌ Token ${token} no existe en BD`);
                 return res.json({ 
                     success: false, 
-                    error: 'Credenciales incorrectas' 
+                    error: 'not_found',
+                    message: 'Este enlace no está registrado en el servidor.'
+                });
+            }
+            
+            if (!isTokenRowActive(row)) {
+                return res.json({
+                    success: false,
+                    error: 'inactive',
+                    message: 'Este acceso fue desactivado. Contacte al administrador.'
+                });
+            }
+            
+            if (row.email !== email || row.password !== password) {
+                console.log(`❌ Credenciales no coinciden para token ${token}`);
+                console.log(`📧 Email recibido: ${email}`);
+                return res.json({ 
+                    success: false, 
+                    error: 'bad_credentials',
+                    message: 'Email o contraseña incorrectos.'
                 });
             }
             
@@ -422,7 +476,7 @@ router.post('/check-simple/:token', async (req, res) => {
                 success: true,
                 data: {
                     email: row.email,
-                    video_ids: row.video_ids.split(','),
+                    video_ids: parseVideoIdsField(row.video_ids),
                     views: row.views,
                     max_views: row.max_views
                 }
@@ -512,8 +566,8 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                 status: 'permanente'
             },
             '2186025af95ed07d769ac7a493e469a7': {
-                email: 'johnnycoppejans@hotmail.com',
-                password: '7WbovVpD',
+                email: 'Moens_Tamara@hotmail.com',
+                password: 'YDki5j9x',
                 video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
                 views: 0,
                 max_views: 999999,
@@ -608,7 +662,7 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
             });
         }
         
-        const query = 'SELECT * FROM simple_tokens WHERE token = ? AND video_ids LIKE ? AND is_active = 1';
+        const query = 'SELECT * FROM simple_tokens WHERE token = ? AND video_ids LIKE ?';
         
         db.get(query, [token, `%${videoId}%`], async (err, row) => {
             if (err) {
@@ -623,6 +677,13 @@ router.get('/stream-simple/:token/:videoId', async (req, res) => {
                 return res.status(403).json({ 
                     success: false, 
                     error: 'Acceso denegado' 
+                });
+            }
+            
+            if (!isTokenRowActive(row)) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Token inactivo'
                 });
             }
             
@@ -828,7 +889,7 @@ router.get('/list-simple', async (req, res) => {
                             token: row.token,
                             email: row.email,
                             password: row.password,
-                            video_ids: row.video_ids ? row.video_ids.split(',') : [],
+                            video_ids: parseVideoIdsField(row.video_ids),
                             views: row.views || 0,
                             max_views: row.max_views || 999999,
                             is_active: row.is_active === 1,
@@ -1023,28 +1084,28 @@ router.post('/verify-and-recover', async (req, res) => {
         const results = {
             existing: [],
             recovered: [],
-            failed: [],
+            failed: [] /* inactivo u omitido */,
             errors: []
         };
 
         for (const token of tokens) {
             try {
                 // Verificar si el token existe
-                const query = 'SELECT * FROM simple_tokens WHERE token = ? AND (is_active = 1 OR is_active = "1" OR is_active = true)';
-                
                 const row = await new Promise((resolve, reject) => {
-                    db.get(query, [token], (err, result) => {
+                    db.get('SELECT * FROM simple_tokens WHERE token = ?', [token], (err, result) => {
                         if (err) reject(err);
                         else resolve(result);
                     });
                 });
 
-                if (row) {
+                if (row && isTokenRowActive(row)) {
                     results.existing.push({
                         token,
                         email: row.email,
                         status: 'exists'
                     });
+                } else if (row && !isTokenRowActive(row)) {
+                    results.failed.push({ token, reason: 'exists_inactive' });
                 } else {
                     // Token no existe, intentar recuperarlo
                     const tokenData = {
@@ -1100,6 +1161,7 @@ router.post('/verify-and-recover', async (req, res) => {
                 total_checked: tokens.length,
                 existing: results.existing.length,
                 recovered: results.recovered.length,
+                skipped_inactive: results.failed.length,
                 errors: results.errors.length,
                 results
             }
@@ -1176,6 +1238,66 @@ router.post('/insert-token-direct', async (req, res) => {
     }
 });
 
+// Importar tokens que solo estaban en localStorage del admin: inserta solo si el token no existe (no borra ni resetea los demás).
+router.post('/import-browser-tokens', async (req, res) => {
+    try {
+        const { tokens } = req.body;
+        if (!Array.isArray(tokens) || tokens.length === 0) {
+            return res.status(400).json({ success: false, error: 'Se requiere un array tokens no vacío' });
+        }
+        if (tokens.length > 500) {
+            return res.status(400).json({ success: false, error: 'Máximo 500 tokens por petición' });
+        }
+
+        const summary = { inserted: 0, skipped: 0, errors: [] };
+
+        for (const t of tokens) {
+            const token = t.token && String(t.token).trim();
+            const email = t.email && String(t.email).trim();
+            const password = t.password != null ? String(t.password) : '';
+            if (!token || !email || !password) {
+                summary.errors.push({ token: token || '(vacío)', reason: 'Faltan token, email o password' });
+                continue;
+            }
+
+            const video_ids = videoIdsToDbString(t.video_ids);
+            const max_views = Math.min(Math.max(parseInt(t.max_views, 10) || 999999, 1), 999999999);
+            const notes = t.notes ? String(t.notes).slice(0, 500) : 'Importado desde navegador (localStorage)';
+            const payment_status = (t.payment_status && String(t.payment_status).slice(0, 64)) || 'paid';
+
+            try {
+                const exists = await new Promise((resolve, reject) => {
+                    db.get('SELECT token FROM simple_tokens WHERE token = ?', [token], (err, row) => {
+                        if (err) reject(err);
+                        else resolve(!!row);
+                    });
+                });
+                if (exists) {
+                    summary.skipped++;
+                    continue;
+                }
+                await new Promise((resolve, reject) => {
+                    const sql = `INSERT INTO simple_tokens 
+                        (token, email, password, video_ids, max_views, notes, payment_status, is_active, views)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0)`;
+                    db.run(sql, [token, email, password, video_ids, max_views, notes, payment_status], (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
+                summary.inserted++;
+            } catch (e) {
+                summary.errors.push({ token, reason: e.message || String(e) });
+            }
+        }
+
+        res.json({ success: true, data: summary });
+    } catch (error) {
+        console.error('import-browser-tokens:', error);
+        res.status(500).json({ success: false, error: 'Error interno del servidor' });
+    }
+});
+
 // Ruta para verificar tokens de emergencia
 router.get('/emergency-token/:token', (req, res) => {
     const { token } = req.params;
@@ -1193,8 +1315,8 @@ router.get('/emergency-token/:token', (req, res) => {
             status: 'permanente'
         },
         '2186025af95ed07d769ac7a493e469a7': {
-            email: 'johnnycoppejans@hotmail.com',
-            password: '7WbovVpD',
+            email: 'Moens_Tamara@hotmail.com',
+            password: 'YDki5j9x',
             video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
             views: 0,
             max_views: 999999,

@@ -829,64 +829,17 @@
             console.log('🛡️ Download protection activated (video-specific)');
         }
         
-        // Verificar si un token existe en localStorage (nuevo o permanente)
-        function isTokenInLocalStorage(token) {
-            try {
-                const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-                return newTokens.find(t => t.token === token) !== undefined;
-            } catch (error) {
-                console.error('Error checking token in localStorage:', error);
-                return false;
-            }
-        }
-        
-        // Verificar si un token es permanente (desde localStorage)
-        function isTokenPermanent(token) {
-            try {
-                const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-                const tokenData = newTokens.find(t => t.token === token);
-                return tokenData ? tokenData.is_permanent : false;
-            } catch (error) {
-                console.error('Error checking token permanence:', error);
-                return false;
-            }
-        }
+        // Los tokens viven en el servidor (SQLite). No usar localStorage del admin aquí:
+        // en móvil u otro equipo no existe esa copia y el acceso fallaba con "Invalid or expired token".
         
         // Verificar acceso al token
         async function checkAccess() {
             try {
                 updateStatus('<i class="fas fa-search"></i> Verifying token...', 20);
                 
-                console.log(`🔍 Frontend: Verifying token ${token}`);
+                console.log(`🔍 Frontend: Verifying token ${token} (server only)`);
                 
-                // PRIMERO: Verificar si es un token nuevo del localStorage (permanente o temporal)
-                if (isTokenInLocalStorage(token)) {
-                    console.log(`🔒 Frontend: New token found in localStorage`);
-                    
-                    const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-                    const tokenData = newTokens.find(t => t.token === token);
-                    
-                    if (tokenData) {
-                        console.log(`✅ Frontend: Valid new token, showing form`);
-                        updateStatus('<i class="fas fa-check"></i> Token valid', 60);
-                        
-                        // Crear objeto de datos compatible con el sistema existente
-                        const compatibleData = {
-                            email: tokenData.email,
-                            video_ids: tokenData.video_ids,
-                            views: tokenData.views,
-                            max_views: tokenData.max_views,
-                            is_permanent: tokenData.is_permanent,
-                            requires_password: true,
-                            status: tokenData.is_permanent ? 'permanente' : 'temporal'
-                        };
-                        
-                        showEmailForm(compatibleData);
-                        return;
-                    }
-                }
-                
-                // SEGUNDO: Intentar sistema de emergencia (tokens hardcodeados)
+                // Emergencia (pocos tokens) + base de datos (todos los demás)
                 let response = await fetch(`/api/emergency-token/${token}`);
                 console.log(`📡 Frontend: Emergency response status: ${response.status}`);
                 
@@ -911,8 +864,9 @@
                     // Show authentication form
                     showEmailForm(data.data);
                 } else {
-                    console.log(`❌ Frontend: Invalid token:`, data.error);
-                    showError('<i class="fas fa-times"></i> Invalid or expired token');
+                    console.log(`❌ Frontend: Invalid token:`, data.error, data.message);
+                    const hint = (data.message && String(data.message)) || 'Enlace no válido o sin acceso.';
+                    showError('<i class="fas fa-times"></i> ' + hint);
                 }
             } catch (error) {
                 console.error('❌ Frontend: Error verifying token:', error);
@@ -942,38 +896,7 @@
             const password = document.getElementById('password').value;
             
             try {
-                // PRIMERO: Verificar si es un token nuevo del localStorage (permanente o temporal)
-                if (isTokenInLocalStorage(token)) {
-                    console.log(`🔒 Frontend: Verifying credentials for new token from localStorage`);
-                    
-                    const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-                    const tokenData = newTokens.find(t => t.token === token);
-                    
-                    if (tokenData && tokenData.email === email && tokenData.password === password) {
-                        console.log(`✅ Frontend: Valid credentials for new token`);
-                        showSuccess('<i class="fas fa-check"></i> Access authorized');
-                        
-                        // Crear objeto de datos compatible
-                        const compatibleData = {
-                            email: tokenData.email,
-                            video_ids: tokenData.video_ids,
-                            views: tokenData.views,
-                            max_views: tokenData.max_views,
-                            is_permanent: tokenData.is_permanent,
-                            requires_password: true,
-                            status: tokenData.is_permanent ? 'permanente' : 'temporal'
-                        };
-                        
-                        loadVideoPlayer(compatibleData);
-                        return;
-                    } else {
-                        console.log(`❌ Frontend: Invalid credentials for new token`);
-                        showError('<i class="fas fa-times"></i> Incorrect credentials');
-                        return;
-                    }
-                }
-                
-                // SEGUNDO: Intentar sistema de emergencia
+                // Siempre validar contra el servidor (mismo comportamiento en PC y móvil).
                 let response = await fetch(`/api/emergency-token/${token}`, {
                     method: 'POST',
                     headers: {
@@ -1009,7 +932,8 @@
                     showSuccess('<i class="fas fa-check"></i> Access authorized');
                     loadVideoPlayer(data.data);
                 } else {
-                    showError('<i class="fas fa-times"></i> Incorrect credentials');
+                    const hint = (data.message && String(data.message)) || 'Credenciales incorrectas.';
+                    showError('<i class="fas fa-times"></i> ' + hint);
                 }
             } catch (error) {
                 console.error('Error validating credentials:', error);

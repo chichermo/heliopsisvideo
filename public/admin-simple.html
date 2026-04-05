@@ -781,9 +781,16 @@
         <!-- Manage Tokens Tab -->
         <div id="manage" class="tab-content">
             <h3><i class="fas fa-cogs"></i> Token Management</h3>
-            <div class="form-group">
-                <button class="btn btn-primary" onclick="loadAllTokens()">
+            <p style="opacity:0.9;font-size:0.95em;margin-bottom:12px;max-width:720px;">
+                Los tokens siguen guardados en el <strong>servidor</strong> (SQLite). Los cambios del reproductor no borran la base de datos.
+                Si creaste algunos tokens solo en un PC y quedaron en la memoria del navegador, usa <strong>Importar desde este navegador</strong> en cada equipo donde generaste enlaces (una vez por navegador).
+            </p>
+            <div class="form-group" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                <button type="button" class="btn btn-primary" onclick="loadAllTokens()">
                     <i class="fas fa-refresh"></i> Refresh Token List
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="importTokensFromThisBrowser()" title="Sube al servidor los tokens guardados en localStorage en este equipo">
+                    <i class="fas fa-upload"></i> Importar desde este navegador
                 </button>
             </div>
             
@@ -821,6 +828,8 @@
             // Cargar datos si es necesario
             if (tabName === 'stats') {
                 loadStats();
+            } else if (tabName === 'manage') {
+                loadAllTokens();
             }
         }
         
@@ -900,8 +909,8 @@
                     
                     document.getElementById('result').style.display = 'block';
                     
-                    // Agregar token a la lista hardcodeada
-                    addNewToken(data.data.email, data.data.token, data.data.password);
+                    // Lista siempre desde el servidor (no localStorage por navegador)
+                    loadAllTokens();
                     
                     // Limpiar formulario
                     document.getElementById('tokenForm').reset();
@@ -991,6 +1000,8 @@
                     
                     document.getElementById('bulkResult').style.display = 'block';
                     
+                    loadAllTokens();
+                    
                     // Limpiar formulario
                     document.getElementById('bulkForm').reset();
                     selectedVideosBulk = [];
@@ -1061,92 +1072,108 @@
         // Cargar estadísticas al inicio
         loadStats();
         
-        // Lista hardcodeada de tokens (simple y directo)
-        const hardcodedTokens = [
-            { email: 'Moens_Tamara@hotmail.com', token: '2186025af95ed07d769ac7a493e469a7', password: 'YDki5j9x', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'chiara@brandstoffenslabbinck.com', token: 'd4585c2f30851d38df97533004faab0e', password: 'qkR8UkeL', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'johnnycoppejans@hotmail.com', token: '3e736c6f6eb01c7942fe52e841495877', password: '7WbovVpD', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'verraes-dhooghe@skynet.be', token: 'ffce28c9269663d32bf63b275caf759c', password: '3M5V3iPe', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'schiettecatte.nathalie@gmail.com', token: '57f11b2591563aa3d69a19a5c0da85fd', password: '2etOWzJy', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'lizzy.litaer@gmail.com', token: '552dfb7004e9482a7b77db223aebd92c', password: 'vaaG4whP', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'info@knokke-interiors.be', token: 'd7e7ae1e1953a2512635840e6a36bd88', password: 'rMr2jtbL', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'kellefleerackers@hotmail.com', token: 'c12e1ab7cc23887acead9db2e27c52bc', password: 'mkjSjY7N', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'evy_verstrynge@hotmail.com', token: 'ee6c8bb94d76ba0e18b5b6de1324138b', password: '2SCSmij7', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'eline.degroote08@icloud.com', token: 'e4dfa25683905acf5be666d66f3d2ec6', password: '5lxm2kVC', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'melissa_lamote@hotmail.com', token: '708a234c20d1b2c95fb604e02130ece3', password: '1ILi4iX3', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'tantefie2109@hotmail.com', token: 'b02df63790a3b733cb6d521023f2a3b5', password: 'A6J6Vnzq', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'emilydelcroix123@gmail.com', token: 'eeec1ddfcd54f946a215f63aec1625e3', password: 'FzuI06Zn', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'verbouwsandra@gmail.com', token: '988f706df719313e2612994893efe24b', password: 'Qwv6PJgn', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'sam_bogaert@outlook.com', token: '55c17a2364d9b55b36d2bcea3b418d31', password: 'p49ZX60E', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'jessie-westyn@hotmail.com', token: '0d6063265005fb10e7efe7fa81871006', password: 'kbE57BXB', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'France.dekeyser@hotmail.com', token: '382f2404e48d269850782b098babef8a', password: 'iDoDKn8h', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'ella8300@icloud.com', token: '7d5edb6595788b9ab48d55cba1a6dd05', password: 'troUdlXV', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'sofiehertsens@hotmail.com', token: '29202f2a81862ab8e3ea2280dfcfa8d1', password: 'HyXCwyr4', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'w-elshout@hotmail.com', token: 'fc455d68f3f81fca8eede63fdc46f868', password: 'cWB9wYom', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'joyavantorre@gmail.com', token: 'e99c610d8b7887d2f03e2160dc02932a', password: 'Rvn28U15', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'vstaal@hotmail.com', token: '5ab19ba7e644047967e4c4f7b72445a4', password: 'nmn3pWkM', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'kurzieboy@hotmail.com', token: '0469d9ab40b84e74636387ee11db450a', password: '0xzLaSBR', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'marjolijnrotsaert@hotmail.com', token: '85bb0db6b1440ae97775c445923f2b7f', password: '7K7wWaxe', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'shana.moyaert@hotmail.com', token: '6679c5eff294e2014ace94dc0fbf2ac5', password: 'zlhv96rH', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'ymkevanherpe@hotmail.com', token: 'ddcffb66ce06e26493e679e095e6d54a', password: 'cgbR1cw2', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'fauve.muyllaert@gmail.com', token: 'a99956c7ac4c0618107cb55f29df4fff', password: 'XCDKZb2v', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'christy.de.graeve@icloud.com', token: '387f385c619d17864eb6a610b2d6d77a', password: 'AqRwy2Zd', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'lindeversporten@gmail.com', token: '8c9bfdf01215c99b9b303459de515e52', password: 'a24WttS1', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] },
-            { email: 'Carole.scrivens@gmail.com', token: '047993c360a8e0258e7b895d2ca62c77', password: 'naEmwyBH', views: 0, max_views: 999999, is_active: true, created_at: '2024-01-01', notes: 'Token permanente', video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'] }
-        ];
-        
-        // Función para obtener todos los tokens (hardcodeados + nuevos)
-        function getAllTokens() {
-            // Obtener tokens nuevos del localStorage
-            const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-            
-            // Combinar tokens hardcodeados con tokens nuevos
-            return [...hardcodedTokens, ...newTokens];
-        }
-        
-        // Cargar todos los tokens para gestión (ahora usa lista hardcodeada + localStorage)
-        function loadAllTokens() {
+        // Gestión: lista siempre desde el servidor (SQLite en Render = misma BD para todos los PCs y móviles)
+        async function loadAllTokens() {
             const tokensList = document.getElementById('tokensList');
-            tokensList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading tokens...</p></div>';
+            tokensList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading tokens from server...</p></div>';
             
-            // Simular carga rápida
-            setTimeout(() => {
-                const allTokens = getAllTokens();
-                displayTokens(allTokens);
-            }, 500);
+            try {
+                const response = await fetch('/api/video-simple/list-simple');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    tokensList.innerHTML = `<div class="no-tokens"><p>Error: ${data.error || 'No se pudo cargar la lista'}</p></div>`;
+                    return;
+                }
+                
+                const rows = Array.isArray(data.data) ? data.data : [];
+                const normalized = rows.map(row => ({
+                    email: row.email,
+                    token: row.token,
+                    password: row.password,
+                    views: row.views || 0,
+                    max_views: row.max_views != null ? row.max_views : 999999,
+                    is_active: row.is_active !== false,
+                    is_permanent: !!row.is_permanent,
+                    created_at: row.created_at || '',
+                    notes: row.notes || '',
+                    video_ids: Array.isArray(row.video_ids) ? row.video_ids : [],
+                    last_accessed: row.last_accessed || null,
+                    access_link: row.access_link || `${window.location.origin}/watch-simple/${row.token}`
+                }));
+                
+                if (normalized.length === 0) {
+                    tokensList.innerHTML = '<div class="no-tokens"><p>No hay tokens en la base de datos.</p></div>';
+                    return;
+                }
+                
+                displayTokens(normalized);
+            } catch (err) {
+                console.error(err);
+                tokensList.innerHTML = '<div class="no-tokens"><p>Error de red. Abre el admin en la URL del servidor (https://…), no como archivo local.</p></div>';
+            }
         }
         
-        // Función para agregar nuevo token a la lista
-        function addNewToken(email, token, password) {
-            const newToken = {
-                email: email,
-                token: token,
-                password: password,
-                views: 0,
-                max_views: 999999, // Nunca expira por límite de vistas
-                is_active: true,
-                is_permanent: false, // Por defecto son temporales
-                created_at: new Date().toISOString().split('T')[0],
-                notes: 'Temporary token',
-                video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
-                expires_at: null, // Nunca expira por fecha
-                never_expires: true // Flag adicional para asegurar que nunca expire
+        /** Sube al servidor tokens que antes solo estaban en localStorage (sin sobrescribir los que ya existen). */
+        async function importTokensFromThisBrowser() {
+            let raw;
+            try {
+                raw = localStorage.getItem('newTokens');
+            } catch (e) {
+                alert('No se puede leer el almacenamiento del navegador.');
+                return;
+            }
+            if (!raw || raw === '[]') {
+                alert('En este navegador no hay lista "newTokens" para importar. Si ya usabas solo el servidor, no hace falta.');
+                return;
+            }
+            let arr;
+            try {
+                arr = JSON.parse(raw);
+            } catch (e) {
+                alert('Datos en localStorage inválidos.');
+                return;
+            }
+            if (!Array.isArray(arr) || arr.length === 0) {
+                alert('No hay entradas para importar.');
+                return;
+            }
+            if (!confirm(`Se enviarán ${arr.length} tokens al servidor. Los que ya existan no se modificarán (no se pierden vistas ni contraseñas del servidor). ¿Continuar?`)) {
+                return;
+            }
+            const payload = {
+                tokens: arr.map((item) => ({
+                    token: item.token,
+                    email: item.email,
+                    password: item.password,
+                    video_ids: Array.isArray(item.video_ids) ? item.video_ids.join(',') : (item.video_ids || ''),
+                    max_views: item.max_views,
+                    notes: item.notes
+                }))
             };
-            
-            // Obtener tokens existentes del localStorage
-            const existingTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-            
-            // Agregar nuevo token
-            existingTokens.push(newToken);
-            
-            // Guardar en localStorage
-            localStorage.setItem('newTokens', JSON.stringify(existingTokens));
-            
-            // Actualizar la vista
-            const allTokens = getAllTokens();
-            displayTokens(allTokens);
-            
-            console.log('✅ Nuevo token agregado y guardado:', newToken);
+            try {
+                const response = await fetch('/api/video-simple/import-browser-tokens', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    alert('Error: ' + (data.error || 'desconocido'));
+                    return;
+                }
+                const d = data.data || {};
+                let msg = `Importación terminada.\n\nInsertados: ${d.inserted || 0}\nYa existían (sin tocar): ${d.skipped || 0}`;
+                if (d.errors && d.errors.length) {
+                    msg += `\nErrores: ${d.errors.length} (revisa consola).`;
+                    console.warn(d.errors);
+                }
+                alert(msg);
+                loadAllTokens();
+            } catch (e) {
+                console.error(e);
+                alert('Error de red al importar.');
+            }
         }
         
         // Mostrar tokens en la interfaz
@@ -1167,10 +1194,10 @@
                                 Token: ${token.token.substring(0, 8)}... | 
                                 Password: <span class="password">${token.password}</span> | 
                                 Views: ${token.views}/${token.max_views} | 
-                                Created: ${new Date(token.created_at).toLocaleDateString()}
+                                Created: ${token.created_at ? new Date(token.created_at).toLocaleDateString() : '—'}
                             </div>
                             <div class="token-details">
-                                Videos: ${token.video_ids.join(', ')} | 
+                                Videos: ${(token.video_ids || []).join(', ') || '—'} | 
                                 Last Access: ${token.last_accessed ? new Date(token.last_accessed).toLocaleString() : 'Never'}
                             </div>
                             <div class="token-details">
@@ -1192,14 +1219,6 @@
                             <button class="btn btn-small btn-secondary" onclick="resetTokenViews('${token.token}')">
                                 <i class="fas fa-refresh"></i> Reset Views
                             </button>
-                            ${!token.is_permanent ? 
-                                `<button class="btn btn-small btn-success" onclick="makeTokenPermanent('${token.token}')">
-                                    <i class="fas fa-lock"></i> Make Permanent
-                                </button>` : 
-                                `<button class="btn btn-small btn-warning" onclick="makeTokenTemporary('${token.token}')">
-                                    <i class="fas fa-unlock"></i> Make Temporary
-                                </button>`
-                            }
                             <button class="btn btn-small btn-danger" onclick="deleteToken('${token.token}')">
                                 <i class="fas fa-trash"></i> Delete
                             </button>
@@ -1294,64 +1313,6 @@
             }
         }
         
-        // Hacer token permanente
-        function makeTokenPermanent(token) {
-            if (!confirm('Are you sure you want to make this token permanent? It will never expire.')) return;
-            
-            // Obtener tokens del localStorage
-            const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-            
-            // Encontrar y actualizar el token
-            const tokenIndex = newTokens.findIndex(t => t.token === token);
-            if (tokenIndex !== -1) {
-                newTokens[tokenIndex].is_permanent = true;
-                newTokens[tokenIndex].notes = 'Permanent token';
-                newTokens[tokenIndex].max_views = 999999; // Asegurar que nunca expire
-                newTokens[tokenIndex].expires_at = null; // Nunca expira por fecha
-                newTokens[tokenIndex].never_expires = true; // Flag adicional
-                
-                // Guardar en localStorage
-                localStorage.setItem('newTokens', JSON.stringify(newTokens));
-                
-                // Actualizar la vista
-                const allTokens = getAllTokens();
-                displayTokens(allTokens);
-                
-                alert('Token made permanent successfully!');
-            } else {
-                alert('Token not found in new tokens list');
-            }
-        }
-        
-        // Hacer token temporal
-        function makeTokenTemporary(token) {
-            if (!confirm('Are you sure you want to make this token temporary? Note: It will still never expire.')) return;
-            
-            // Obtener tokens del localStorage
-            const newTokens = JSON.parse(localStorage.getItem('newTokens') || '[]');
-            
-            // Encontrar y actualizar el token
-            const tokenIndex = newTokens.findIndex(t => t.token === token);
-            if (tokenIndex !== -1) {
-                newTokens[tokenIndex].is_permanent = false;
-                newTokens[tokenIndex].notes = 'Temporary token';
-                newTokens[tokenIndex].max_views = 999999; // Asegurar que nunca expire
-                newTokens[tokenIndex].expires_at = null; // Nunca expira por fecha
-                newTokens[tokenIndex].never_expires = true; // Flag adicional
-                
-                // Guardar en localStorage
-                localStorage.setItem('newTokens', JSON.stringify(newTokens));
-                
-                // Actualizar la vista
-                const allTokens = getAllTokens();
-                displayTokens(allTokens);
-                
-                alert('Token made temporary successfully!');
-            } else {
-                alert('Token not found in new tokens list');
-            }
-        }
-        
         // Eliminar token
         async function deleteToken(token) {
             if (!confirm('Are you sure you want to delete this token? This action cannot be undone.')) return;
@@ -1372,28 +1333,6 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Error deleting token');
-            }
-        }
-        
-        // Actualizar función switchTab para cargar tokens cuando se abre la pestaña de gestión
-        function switchTab(tabName) {
-            // Ocultar todos los tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Mostrar tab seleccionado
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-            
-            // Cargar datos si es necesario
-            if (tabName === 'stats') {
-                loadStats();
-            } else if (tabName === 'manage') {
-                loadAllTokens();
             }
         }
     </script>

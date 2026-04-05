@@ -86,7 +86,7 @@ app.use('/api/vimeo', vimeoRoutes);
 app.get('/api/emergency-token/:token', (req, res) => {
     const { token } = req.params;
     
-    // Tokens de emergencia hardcodeados
+    // Solo 2 entradas “rápidas”; el resto va por SQLite (auto-init). 2186025… = Moens (alineado con auto-init-tokens.js).
     const emergencyTokens = {
         '3e736c6f6eb01c7942fe52e841495877': {
             email: 'johnnycoppejans@hotmail.com',
@@ -99,8 +99,8 @@ app.get('/api/emergency-token/:token', (req, res) => {
             status: 'permanente'
         },
         '2186025af95ed07d769ac7a493e469a7': {
-            email: 'johnnycoppejans@hotmail.com',
-            password: '7WbovVpD',
+            email: 'Moens_Tamara@hotmail.com',
+            password: 'YDki5j9x',
             video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
             views: 0,
             max_views: 999999,
@@ -109,7 +109,7 @@ app.get('/api/emergency-token/:token', (req, res) => {
             status: 'permanente'
         }
     };
-    
+
     if (emergencyTokens[token]) {
         res.json({
             success: true,
@@ -135,8 +135,7 @@ app.get('/api/emergency-token/:token', (req, res) => {
 app.post('/api/emergency-token/:token', (req, res) => {
     const { token } = req.params;
     const { password } = req.body;
-    
-    // Tokens de emergencia hardcodeados
+
     const emergencyTokens = {
         '3e736c6f6eb01c7942fe52e841495877': {
             email: 'johnnycoppejans@hotmail.com',
@@ -149,8 +148,8 @@ app.post('/api/emergency-token/:token', (req, res) => {
             status: 'permanente'
         },
         '2186025af95ed07d769ac7a493e469a7': {
-            email: 'johnnycoppejans@hotmail.com',
-            password: '7WbovVpD',
+            email: 'Moens_Tamara@hotmail.com',
+            password: 'YDki5j9x',
             video_ids: ['1-38V037fiJbvUytXNPhAtQQ10bPNeLnD', '1gb3uJnvBvpZ1ob51uiOiwtrpo4MvGbdE'],
             views: 0,
             max_views: 999999,
